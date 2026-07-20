@@ -1,6 +1,8 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+import { BrowserRouter } from 'react-router-dom';
 import { App } from './App';
+import { AuthenticationProvider } from './app/providers/AuthenticationProvider';
 import './styles/global.css';
 
 const rootElement = document.getElementById('root');
@@ -11,6 +13,10 @@ if (!rootElement) {
 
 createRoot(rootElement).render(
   <StrictMode>
-    <App />
+    <BrowserRouter>
+      <AuthenticationProvider>
+        <App />
+      </AuthenticationProvider>
+    </BrowserRouter>
   </StrictMode>,
 );

@@ -1,6 +1,62 @@
 :root {
   color-scheme: dark;
   --color-canvas: #181818;
+  --color-canvas-elevated: #303030;
+  --color-primary: #da291c;
+  --color-primary-active: #b01e0a;
+  --color-primary-hover: #9d2211;
+  --color-ink: #ffffff;
+  --color-body: #969696;
+  --color-hairline: #303030;
+  --color-on-primary: #ffffff;
+  --color-focus: #f6e500;
+  --font-family-sans: 'FerrariSans', -apple-system, system-ui, sans-serif;
+  --font-size-display-xl: 3.5rem;
+  --font-size-display-lg: 2.25rem;
+  --font-size-body: 0.875rem;
+  --font-size-caption: 0.6875rem;
+  --font-size-button: 0.875rem;
+  --font-size-nav: 0.8125rem;
+  --font-weight-display: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --line-height-display-xl: 1.1;
+  --line-height-display-lg: 1.2;
+  --line-height-body: 1.5;
+  --line-height-caption: 1.4;
+  --line-height-button: 1;
+  --line-height-nav: 1.4;
+  --letter-spacing-display-xl: -0.07rem;
+  --letter-spacing-display-lg: -0.0225rem;
+  --letter-spacing-caption: 0.06875rem;
+  --letter-spacing-button: 0.0875rem;
+  --letter-spacing-nav: 0.040625rem;
+  --space-xxs: 0.5rem;
+  --space-xs: 1rem;
+  --space-sm: 1.5rem;
+  --space-lg: 3rem;
+  --space-xl: 4rem;
+  --space-xxl: 6rem;
+  --border-width-hairline: 0.0625rem;
+  --radius-none: 0;
+  --control-height: 3rem;
+  --button-padding-block: 0.875rem;
+  --button-padding-inline: 2rem;
+  --focus-ring-width: 0.125rem;
+  --focus-ring-offset: 0.25rem;
+  --icon-size: 1.125rem;
+  --brand-logo-width: 20rem;
+  --shell-logo-width: 12rem;
+  --copy-max-width: 28rem;
+  --auth-panel-width: 34rem;
+  --auth-panel-min-height: 36rem;
+  --content-max-width: 80rem;
+  --top-nav-height: 4rem;
+  --nav-active-border-width: 0.125rem;
+  --mobile-identity-width: 8rem;
+  --visually-hidden-size: 0.0625rem;
+  --motion-fast: 160ms;
+  --motion-loading: 900ms;
 }
 
 * {
@@ -14,22 +70,13 @@ html {
 
 body {
   background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-family-sans);
   margin: 0;
   min-width: 20rem;
   min-height: 100vh;
 }
 
-.app {
-  align-items: center;
-  display: flex;
-  justify-content: center;
-  min-height: 100vh;
-  padding: 2rem;
-}
-
-.app img {
-  display: block;
-  height: auto;
-  max-width: 20rem;
-  width: 100%;
+button {
+  font: inherit;
 }
