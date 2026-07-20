@@ -1,0 +1,216 @@
+.form {
+  border-top: var(--border-width-hairline) solid var(--color-hairline);
+  padding-top: var(--space-md);
+}
+
+.formGrid {
+  display: grid;
+  gap: var(--space-sm) var(--space-md);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.field {
+  border: 0;
+  display: grid;
+  gap: var(--space-xxs);
+  margin: 0;
+  min-width: 0;
+  padding: 0;
+}
+
+.field label,
+.field legend {
+  color: var(--color-body);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-caption);
+  line-height: var(--line-height-caption);
+  text-transform: uppercase;
+}
+
+.field input,
+.field textarea {
+  background: var(--color-canvas);
+  border: var(--border-width-hairline) solid var(--color-body);
+  border-radius: var(--radius-none);
+  color: var(--color-ink);
+  font: inherit;
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-body);
+  min-height: var(--control-height);
+  min-width: 0;
+  padding: var(--space-xxs) var(--space-xs);
+  transition: border-color var(--motion-fast) ease;
+  width: 100%;
+}
+
+.field textarea {
+  min-height: var(--textarea-min-height);
+  resize: vertical;
+}
+
+.field input:hover,
+.field textarea:hover {
+  border-color: var(--color-ink);
+}
+
+.field input:focus-visible,
+.field textarea:focus-visible,
+.segmentedControl input:focus-visible + span,
+.submitButton:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-focus);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.field input[aria-invalid='true'],
+.field textarea[aria-invalid='true'] {
+  border-color: var(--color-warning);
+}
+
+.unitField {
+  align-content: start;
+}
+
+.segmentedControl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.segmentedControl label {
+  min-width: 0;
+  position: relative;
+}
+
+.segmentedControl input {
+  height: var(--visually-hidden-size);
+  opacity: 0;
+  position: absolute;
+  width: var(--visually-hidden-size);
+}
+
+.segmentedControl span {
+  align-items: center;
+  border: var(--border-width-hairline) solid var(--color-body);
+  color: var(--color-body);
+  cursor: pointer;
+  display: flex;
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-semibold);
+  justify-content: center;
+  letter-spacing: 0;
+  line-height: var(--line-height-body);
+  min-height: var(--control-height);
+  padding-inline: var(--space-xxs);
+  text-transform: none;
+  transition: background-color var(--motion-fast) ease,
+    border-color var(--motion-fast) ease, color var(--motion-fast) ease;
+}
+
+.segmentedControl label + label span {
+  border-left: 0;
+}
+
+.segmentedControl input:checked + span {
+  background: var(--color-ink);
+  border-color: var(--color-ink);
+  color: var(--color-canvas);
+}
+
+.notesField {
+  grid-column: 1 / -1;
+}
+
+.fieldError,
+.formError {
+  color: var(--color-warning);
+  font-size: var(--font-size-caption);
+  line-height: var(--line-height-caption);
+  margin: 0;
+  text-wrap: pretty;
+}
+
+.characterCount {
+  color: var(--color-body);
+  font-size: var(--font-size-caption);
+  line-height: var(--line-height-caption);
+  margin: 0;
+  text-align: right;
+}
+
+.formError {
+  border-left: var(--nav-active-border-width) solid var(--color-warning);
+  margin-top: var(--space-sm);
+  max-width: var(--copy-max-width);
+  padding-left: var(--space-xs);
+}
+
+.actions {
+  border-top: var(--border-width-hairline) solid var(--color-hairline);
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--space-md);
+  padding-top: var(--space-sm);
+}
+
+.submitButton {
+  align-items: center;
+  background: var(--color-primary);
+  border: 0;
+  border-radius: var(--radius-none);
+  color: var(--color-on-primary);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: var(--font-size-button);
+  font-weight: var(--font-weight-bold);
+  gap: var(--space-xxs);
+  justify-content: center;
+  letter-spacing: var(--letter-spacing-button);
+  line-height: var(--line-height-button);
+  min-height: var(--control-height);
+  padding-inline: var(--button-padding-inline);
+  text-transform: uppercase;
+  transition: background-color var(--motion-fast) ease,
+    transform var(--motion-fast) ease;
+}
+
+.submitButton:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+}
+
+.submitButton:active:not(:disabled) {
+  background: var(--color-primary-active);
+  transform: scale(0.98);
+}
+
+.submitButton:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.buttonIcon {
+  height: var(--icon-size);
+  width: var(--icon-size);
+}
+
+@media (max-width: 39.99rem) {
+  .formGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .notesField {
+    grid-column: auto;
+  }
+
+  .submitButton {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .field input,
+  .field textarea,
+  .segmentedControl span,
+  .submitButton {
+    transition: none;
+  }
+}

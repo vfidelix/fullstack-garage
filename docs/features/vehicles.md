@@ -1,6 +1,6 @@
 # Vehicle Feature
 
-Status: Draft
+Status: Decision-complete draft
 Date: 2026-07-19
 Architecture: [Fullstack Garage Architecture](../architecture/fullstack-garage-architecture.md)
 Product: [Product Scope and Language](../product/fullstack-garage-product.md)
@@ -38,6 +38,17 @@ scope and language.
 9. Member accounts and member-specific behavior are outside the MVP.
 10. The application does not store a Vehicle's legal or real-world owner.
 11. Friends without accounts have no application access in the MVP.
+12. Supported Vehicle years are fixed at 1900 through 9999 inclusive.
+13. Make, model, registration, VIN, and engine accept at most 50 characters;
+    notes accept at most 500 characters.
+14. A new Vehicle form defaults the odometer unit to kilometres (`km`).
+15. Compact Vehicle labels use make and model, with year prepended when present
+    and registration appended after ` · ` when present.
+16. Duplicate-looking Vehicles are accepted. The UI shows a non-blocking warning
+    when another active or archived Vehicle has the same make, model, and
+    registration after capitalization and spaces are ignored. A missing
+    registration matches another missing registration, and the current Vehicle
+    is excluded when editing.
 
 ## 3. Operating Model
 
@@ -87,15 +98,15 @@ A Vehicle contains:
 | --- | --- | --- |
 | `id` | Yes | Application-owned `VehicleId`. |
 | `ownerId` | Yes | Stable app-owned authorization key derived from the Garage Admin identity. |
-| `make` | Yes | Trimmed, non-empty text. |
-| `model` | Yes | Trimmed, non-empty text. |
-| `year` | No | Must be within the configured supported range. |
-| `registration` | No | Private data; not globally unique. |
-| `vin` | No | Private data; not globally unique. |
+| `make` | Yes | Trimmed, non-empty text; maximum 50 characters. |
+| `model` | Yes | Trimmed, non-empty text; maximum 50 characters. |
+| `year` | No | Integer from 1900 through 9999 inclusive. |
+| `registration` | No | Private data; not globally unique; maximum 50 characters. |
+| `vin` | No | Private data; not globally unique; maximum 50 characters. |
 | `currentOdometer` | No | A non-negative whole number. |
 | `odometerUnit` | Yes | `km` or `mi`. |
-| `engine` | No | Free-text engine description. |
-| `notes` | No | Private free text. |
+| `engine` | No | Free-text engine description; maximum 50 characters. |
+| `notes` | No | Private free text; maximum 500 characters. |
 | `archivedAt` | No | When present, the Vehicle is archived. |
 | `createdAt` | Yes | System managed. |
 | `updatedAt` | Yes | System managed. |
@@ -115,9 +126,16 @@ export type OdometerUnit = 'km' | 'mi';
 ## 6. Business Rules
 
 - Make and model are required after trimming whitespace.
+- Year, when supplied, must be an integer from 1900 through 9999 inclusive.
+- Make, model, registration, VIN, and engine must not exceed 50 characters;
+  notes must not exceed 500 characters.
 - Current odometer, when supplied, must be zero or greater and contain no
   fractional value.
 - Registration and VIN are optional and are not uniqueness keys.
+- Duplicate-looking Vehicles remain valid and may be saved. Duplicate comparison
+  ignores capitalization and spaces in make, model, and registration; two
+  missing registrations compare as the same missing value. The comparison spans
+  active and archived Vehicles and excludes the Vehicle currently being edited.
 - Vehicle access requires the authenticated Garage Admin established by the
   Authentication and Access feature.
 - The Garage Admin may manage every Vehicle.
@@ -145,9 +163,11 @@ operations:
 - `restoreVehicle`
 - `deleteVehicle`
 
-`deleteVehicle` must return an app-owned conflict error when Service Records
-exist. The UI can then offer archiving without interpreting a database foreign-key
-or Supabase error.
+Once Service Record persistence exists, `deleteVehicle` must return an app-owned
+conflict error when history exists. The UI can then offer archiving without
+interpreting a database foreign-key or Supabase error. That error path is part of
+the deferred integration described in Section 9, not the initial Vehicle
+delivery.
 
 Use cases obtain the current app-owned user from the application authentication
 workflow. Owner IDs must not be accepted as untrusted authorization input.
@@ -189,6 +209,7 @@ The `vehicles` table defined by the architecture requires these additions:
 
 The table also requires:
 
+- Check constraints for the supported year and approved field lengths.
 - A non-negative check constraint for `current_odometer`.
 - An index on `owner_id` for owner-scoped lists.
 - An index that supports active owner-scoped lists, where `archived_at` is null.
@@ -197,6 +218,15 @@ The table also requires:
 
 Deletion must be rejected when related Service Records exist. The foreign key
 must not cascade from a Vehicle to its Service Records.
+
+The initial Vehicle delivery precedes Service Record persistence. It creates the
+Vehicle schema without a placeholder Service Record table and therefore cannot
+yet enforce or exercise history-dependent delete blocking or odometer-unit
+locking. The later Service Record persistence migration must add the composite
+foreign key without delete cascade and atomically introduce both history checks.
+Until then, every persisted Vehicle has no representable Service Record history,
+so permanent deletion and odometer-unit changes remain available. This deferral
+must not be reported as completed history enforcement.
 
 Database schema, constraints, indexes, and RLS policies must be introduced in a
 versioned Supabase migration.
@@ -210,8 +240,10 @@ versioned Supabase migration.
 - Unauthenticated and unauthorized identities receive no Vehicle data.
 - Registration, VIN, odometer, engine details, and notes must not be included in
   logs or analytics payloads by default.
-- Archive and delete eligibility must be enforced by the database or an atomic
-  database function, not only by a prior UI check.
+- Archive eligibility and current deletion authorization must be enforced by the
+  database or an atomic database function, not only by a prior UI check. The
+  later Service Record integration must add the atomic history-dependent delete
+  and odometer-unit checks described in Section 9.
 - RLS uses the stable current-user and Garage Admin role helpers supplied by the
   Authentication and Access feature.
 - Garage Admin authorization must never expose or depend on a Supabase
@@ -224,10 +256,16 @@ versioned Supabase migration.
 - Archived Vehicles are presented in a separate view or explicit filter.
 - Archived Vehicles cannot be selected when creating a Service Record.
 - The delete action explains that it is permanent.
-- If deletion is blocked by existing history, the user is offered the archive
-  action.
-- Changing an odometer unit is disabled once Service Records exist, with a clear
-  explanation.
+- Once Service Record persistence exists, a deletion blocked by history offers
+  the archive action and an odometer-unit change is disabled with a clear
+  explanation. These two states are deferred from the initial Vehicle delivery
+  under Section 9.
+- A new Vehicle form defaults its odometer unit to kilometres.
+- Compact labels render as `2021 Ferrari Roma · ABC 123`, `2021 Ferrari Roma`,
+  `Ferrari Roma · ABC 123`, or `Ferrari Roma` according to which optional
+  year and registration values are present.
+- A matching active or archived Vehicle produces a non-blocking duplicate
+  warning but never prevents saving.
 - Forms mirror domain validation for immediate feedback, while repositories and
   database constraints remain authoritative.
 
@@ -248,6 +286,12 @@ The Vehicle feature is ready to enable Service Records when it can provide:
 The Service Record design must preserve the meaning of odometer readings and PDF
 snapshots even if editable Vehicle details later change.
 
+The Service Record persistence delivery also owns completing the deferred
+cross-feature integration: add the non-cascading composite foreign key, reject
+deletion when history exists, reject odometer-unit changes when history exists,
+surface those app-owned conflict/eligibility states through the Vehicle
+repository, and add database, repository, and UI coverage for both behaviors.
+
 `performedBy` remains descriptive Service Record data and should default to the
 Garage Admin's display name when the Garage Admin creates a record. It is not a
 substitute for authorization or audit identity.
@@ -257,10 +301,14 @@ substitute for authorization or audit identity.
 Unit tests should cover:
 
 - Required make and model validation.
+- The 1900 and 9999 year boundaries and rejected values outside them.
+- Approved field-length boundaries.
 - Supported odometer units.
 - Non-negative whole-number odometers.
-- Unit changes being rejected after history exists.
 - Active and archived state behavior.
+- Compact label fallbacks.
+- Duplicate comparison ignoring capitalization and spaces, including missing
+  registration and current-Vehicle exclusion.
 - Vehicle creation input excluding `ownerId` and authentication data.
 
 Repository contract tests should cover:
@@ -268,20 +316,30 @@ Repository contract tests should cover:
 - Create, read, update, active list, and archived list behavior.
 - Archive and restore behavior.
 - Permanent deletion without Service Records.
-- Rejected deletion with Service Records.
+- Non-blocking duplicate lookup across active and archived Vehicles.
 - Garage Admin access to all stored Vehicles and app-owned error mapping.
+
+Rejected deletion with Service Records and rejected odometer-unit changes after
+history exists are deferred to the Service Record persistence integration
+described in Sections 9 and 12.
 
 RLS integration tests must exercise the Garage Admin, a mapped non-admin identity,
 an authenticated but unmapped identity where supported, and an unauthenticated
 user for every operation.
 
-## 14. Open Decisions
+## 14. Resolved Decisions
 
-The following decisions remain for discussion before implementation:
+Resolved on 2026-07-20:
 
-1. The configured minimum and maximum supported Vehicle year.
-2. Field length limits for make, model, registration, VIN, engine, and notes.
-3. Whether `km` should be the form default as well as the database default.
-4. The display label used when year, registration, or both are absent.
-5. Whether duplicate-looking Vehicles should produce a warning or be accepted
-   without comment.
+1. Supported Vehicle years are the fixed inclusive range 1900 through 9999.
+2. Make, model, registration, VIN, and engine accept at most 50 characters;
+   notes accept at most 500 characters.
+3. `km` is the new-Vehicle form default as well as the database default.
+4. Compact labels use the four exact optional-field forms documented in Section
+   11.
+5. Duplicate-looking Vehicles are accepted with a non-blocking warning under the
+   exact comparison rule documented in Sections 2 and 6.
+6. Vehicle persistence is delivered before Service Record persistence. No
+   placeholder Service Record schema is created; history-dependent deletion and
+   odometer-unit enforcement remains explicit deferred Service Record integration
+   work.

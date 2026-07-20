@@ -100,7 +100,7 @@ function createDeferred<T>(): {
 describe('protected application routes', () => {
   it('never renders protected content while authentication initializes', () => {
     renderRoutes(
-      '/vehicles/garage?tab=history#latest-record',
+      '/garage/vehicles?tab=history#latest-record',
       createAuthentication({ status: 'initializing' }),
     );
 
@@ -125,11 +125,11 @@ describe('protected application routes', () => {
     dashboard.unmount();
 
     renderRoutes(
-      '/vehicles/garage?tab=history#latest-record',
+      '/garage/vehicles?tab=history#latest-record',
       authentication,
     );
     expect(screen.getByLabelText('Current application path')).toHaveTextContent(
-      '/vehicles/garage?tab=history#latest-record',
+      '/garage/vehicles?tab=history#latest-record',
     );
   });
 
@@ -198,7 +198,7 @@ describe('protected application routes', () => {
   it('preserves a protected pathname, query, and hash for unauthenticated sign-in', () => {
     const signInWithGoogle = vi.fn().mockResolvedValue({ status: 'initializing' });
     renderRoutes(
-      '/vehicles/garage?tab=history#latest-record',
+      '/garage/vehicles?tab=history#latest-record',
       createAuthentication(
         { status: 'unauthenticated' },
         { signInWithGoogle },
@@ -207,7 +207,7 @@ describe('protected application routes', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Continue with Google' }));
     expect(signInWithGoogle).toHaveBeenCalledWith(
-      '/vehicles/garage?tab=history#latest-record',
+      '/garage/vehicles?tab=history#latest-record',
     );
   });
 
@@ -273,12 +273,12 @@ describe('public authentication routes', () => {
   it('does not leave authenticated users on sign-in or access unavailable', () => {
     const authentication = createAuthentication(authenticatedState);
     const signIn = renderRoutes(
-      '/sign-in?returnPath=%2Fvehicles%2Fgarage%3Ftab%3Dhistory%23latest',
+      '/sign-in?returnPath=%2Fgarage%2Fvehicles%3Ftab%3Dhistory%23latest',
       authentication,
     );
 
     expect(screen.getByLabelText('Current application path')).toHaveTextContent(
-      '/vehicles/garage?tab=history#latest',
+      '/garage/vehicles?tab=history#latest',
     );
     signIn.unmount();
 
@@ -314,7 +314,7 @@ describe('authentication callback route', () => {
         >
           <MemoryRouter
             initialEntries={[
-              '/auth/callback?returnPath=%2Fvehicles%2Fgarage%3Ftab%3Dhistory%23latest',
+              '/auth/callback?returnPath=%2Fgarage%2Fvehicles%3Ftab%3Dhistory%23latest',
             ]}
           >
             <AppRoutes />
@@ -324,7 +324,7 @@ describe('authentication callback route', () => {
     );
 
     expect(await screen.findByLabelText('Current application path')).toHaveTextContent(
-      '/vehicles/garage?tab=history#latest',
+      '/garage/vehicles?tab=history#latest',
     );
     expect(restore).toHaveBeenCalledOnce();
   });
@@ -332,12 +332,12 @@ describe('authentication callback route', () => {
   it('uses settled provider state to restore a validated deep link', async () => {
     const completeAuthenticationRedirect = vi.fn().mockResolvedValue(authenticatedState);
     renderRoutes(
-      '/auth/callback?returnPath=%2Fvehicles%2Fgarage%3Ftab%3Dhistory%23latest&code=ignored',
+      '/auth/callback?returnPath=%2Fgarage%2Fvehicles%3Ftab%3Dhistory%23latest&code=ignored',
       createAuthentication(authenticatedState, { completeAuthenticationRedirect }),
     );
 
     expect(await screen.findByLabelText('Current application path')).toHaveTextContent(
-      '/vehicles/garage?tab=history#latest',
+      '/garage/vehicles?tab=history#latest',
     );
     expect(completeAuthenticationRedirect).not.toHaveBeenCalled();
   });
