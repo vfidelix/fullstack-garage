@@ -5,6 +5,9 @@ Date: 2026-07-19
 Architecture: [Fullstack Garage Architecture](../architecture/fullstack-garage-architecture.md)
 Product: [Product Scope and Language](../product/fullstack-garage-product.md)
 Related features: [Vehicles](vehicles.md), [Service Records](service-records.md)
+Operations: [Authentication and Access Operations Runbook](../operations/authentication-access-runbook.md)
+Recovery: [Garage Admin Identity Recovery Runbook](../operations/authentication-access-recovery-runbook.md)
+Security audit: [Authentication and Access Security Audit](../operations/authentication-access-security-audit.md)
 
 ## 1. Purpose
 
@@ -543,10 +546,15 @@ Feature UI and application use cases remain independent of provider contracts
 
 The following decisions remain before implementation or production release:
 
-1. The privileged recovery procedure for loss of the Garage Admin's Google
-   account.
-2. When to introduce a custom authentication domain and verified Google branding.
-3. Whether application-level TOTP MFA should be required in a later release.
+1. When to introduce a custom authentication domain and verified Google branding.
+2. Whether application-level TOTP MFA should be required in a later release.
+
+Resolved on 2026-07-20: loss of the sole Garage Admin Google identity uses an
+authorized, two-person-reviewed, atomic no-overlap replacement of its Supabase
+identity mapping. Recovery preserves the admin `AppUserId`, retains the old
+`auth.users` row unmapped for audit, maps the verified replacement identity to
+the existing admin, and removes only the orphaned provisional member. See the
+[Garage Admin Identity Recovery Runbook](../operations/authentication-access-recovery-runbook.md).
 
 ## 20. Review History
 
@@ -559,6 +567,7 @@ unchanged so the decision history is preserved.
 | 2026-07-19 | Approved update | Product owner | Approved Google-sourced initial display names, Supabase default session controls with a one-day fallback, and a single Garage Admin for production. |
 | 2026-07-19 | Approved update | Product owner | Added custom API migration guardrails while keeping future adapters, backend implementation, and identity cutover outside the MVP Definition of Done. |
 | 2026-07-19 | Approved update | Product owner | Limited MVP access to the Garage Admin and deferred member provisioning and member-specific behavior. |
+| 2026-07-20 | Approved update | Product owner | Resolved sole-admin recovery with an authorized two-person atomic identity-mapping replacement that preserves the admin AppUserId and retains the old auth row unmapped for audit. |
 
 ## 21. Primary References
 

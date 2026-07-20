@@ -14,5 +14,10 @@
     "skipLibCheck": true,
     "noEmit": true
   },
-  "include": ["vite.config.ts"]
+  "include": [
+    "vite.config.ts",
+    "viteEnvironmentGuard.test.ts",
+    "viteEnvironmentGuard.ts",
+    "vitest.config.ts"
+  ]
 }
