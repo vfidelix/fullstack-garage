@@ -1,0 +1,4 @@
+interface:
+  display_name: "Feature Orchestrator"
+  short_description: "Plan, implement, review, and fix features"
+  default_prompt: "Use $orchestrate-feature to deliver this feature through planning, approval, implementation, review, and fixes."

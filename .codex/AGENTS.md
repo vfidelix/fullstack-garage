@@ -18,9 +18,12 @@ The generated baseline enables GitHub, Context7, Exa, Memory, Playwright, and Se
 - Explorer: read-only evidence gathering
 - Reviewer: correctness, security, and regression review
 - Docs researcher: API and release-note verification
+- Feature orchestrator: planning, approval, implementation, review, and fix-loop coordination
+- Feature planner: requirement clarification and dependency-aware task breakdowns
+- Feature worker: one bounded implementation or fix task with fresh context
+- Feature reviewer: feature correctness, risk, maintainability, and overengineering review
 
-## Workflow Files
+## Feature Delivery Workflow
 
-- No dedicated workflow command files were generated for this repo.
-
-Use these workflow files as reusable task scaffolds when the detected repository workflows recur.
+- Canonical workflow: `.agents/skills/orchestrate-feature/SKILL.md`
+- Use `feature-orchestrator` for end-to-end feature delivery; specialist feature agents require its approved-plan handoff.
