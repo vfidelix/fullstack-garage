@@ -33,7 +33,23 @@ multi_agent = true
 
 [agents]
 max_threads = 6
-max_depth = 1
+max_depth = 2
+
+[agents.feature-orchestrator]
+description = "Coordinates the complete feature delivery workflow and its specialist agents."
+config_file = "agents/feature-orchestrator.toml"
+
+[agents.feature-planner]
+description = "Turns a clear feature request into an approved, verifiable task breakdown."
+config_file = "agents/feature-planner.toml"
+
+[agents.feature-worker]
+description = "Implements one bounded task from an approved feature breakdown."
+config_file = "agents/feature-worker.toml"
+
+[agents.feature-reviewer]
+description = "Reviews completed feature work and identifies focused fixes."
+config_file = "agents/feature-reviewer.toml"
 
 [agents.explorer]
 description = "Read-only codebase explorer for gathering evidence before changes are proposed."
