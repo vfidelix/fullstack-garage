@@ -19,7 +19,7 @@ describe('Vehicle database integration suite source', () => {
   it('is transactional, deterministic, and synthetic', () => {
     expect(databaseSuite).toMatch(/^begin;/iu);
     expect(databaseSuite).toMatch(/rollback;\s*$/iu);
-    expect(databaseSuite).toContain('extensions.plan(75)');
+    expect(databaseSuite).toContain('extensions.plan(80)');
     expect(databaseSuite).toContain('Synthetic Vehicle Admin');
     expect(databaseSuite).not.toMatch(
       /gmail\.com|@googlemail|service[_-]?role[_-]?key/iu,
@@ -120,6 +120,10 @@ describe('Vehicle database integration suite source', () => {
       'year cannot be below 1900',
       'year cannot exceed 9999',
       'registration cannot exceed 50 characters',
+      'registration state must be an approved Australian code',
+      'registration state rejects lowercase codes',
+      'all approved registration state codes are accepted',
+      'existing compatible Vehicles may omit registration state',
       'VIN cannot exceed 50 characters',
       'odometer cannot be negative',
       'odometer cannot exceed the safe integer maximum',

@@ -68,7 +68,15 @@ function VehicleRow({
         <dl className={styles.details}>
           <div className={styles.detail}>
             <dt>Registration</dt>
-            <dd>{vehicle.registration ?? 'Not recorded'}</dd>
+            <dd>
+              {vehicle.registration === undefined
+                ? 'Not recorded'
+                : `${vehicle.registration}${
+                  vehicle.registrationState === undefined
+                    ? ''
+                    : ` ${vehicle.registrationState}`
+                }`}
+            </dd>
           </div>
           <div className={styles.detail}>
             <dt>Year</dt>
@@ -79,7 +87,7 @@ function VehicleRow({
             <dd className={styles.numericValue}>{formatOdometer(vehicle)}</dd>
           </div>
           <div className={styles.detail}>
-            <dt>State</dt>
+            <dt>Status</dt>
             <dd>{lifecycle === 'active' ? 'Active' : 'Archived'}</dd>
           </div>
         </dl>

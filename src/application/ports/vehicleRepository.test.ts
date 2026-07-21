@@ -47,6 +47,7 @@ const vehicle: Vehicle = {
   model: 'Roma',
   year: 2021,
   registration: 'TEST 123',
+  registrationState: 'WA',
   currentOdometer: 12_500,
   odometerUnit: 'km',
   createdAt: '2026-07-20T00:00:00.000Z',
@@ -117,7 +118,7 @@ class RecordingVehicleRepository implements VehicleRepository {
     );
     return Promise.resolve(success({
       vehicleId: vehicle.id,
-      label: '2021 Ferrari Roma · TEST 123',
+      label: '2021 Ferrari Roma · TEST 123 WA',
     }));
   }
 }
@@ -169,17 +170,18 @@ describe('VehicleRepository contract shape', () => {
       make: 'ferrari',
       model: 'roma',
       registration: 'test123',
+      registrationState: 'WA',
     };
 
     await expect(repository.findDuplicate(candidate)).resolves.toEqual(success({
       vehicleId: 'vehicle-1',
-      label: '2021 Ferrari Roma · TEST 123',
+      label: '2021 Ferrari Roma · TEST 123 WA',
     }));
     await expect(
       repository.findDuplicate(candidate, 'vehicle-current'),
     ).resolves.toEqual(success({
       vehicleId: 'vehicle-1',
-      label: '2021 Ferrari Roma · TEST 123',
+      label: '2021 Ferrari Roma · TEST 123 WA',
     }));
 
     expect(repository.calls).toEqual([

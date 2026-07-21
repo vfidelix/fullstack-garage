@@ -65,6 +65,7 @@ const vehicle: Vehicle = {
   model: 'Roma',
   year: 2021,
   registration: 'TEST 123',
+  registrationState: 'WA',
   vin: 'PRIVATE-VIN',
   currentOdometer: 12_500,
   odometerUnit: 'km',
@@ -86,6 +87,7 @@ const validInput: CreateVehicle = {
   model: 'Roma',
   year: 2021,
   registration: 'TEST 123',
+  registrationState: 'WA',
   odometerUnit: 'km',
 };
 
@@ -390,6 +392,7 @@ describe('VehicleUseCases create and update', () => {
       make: '  Ferrari  ',
       model: '  Roma  ',
       registration: '  TEST 123  ',
+      registrationState: ' wa ',
       vin: '   ',
       currentOdometer: 0,
       odometerUnit: 'km',
@@ -408,6 +411,7 @@ describe('VehicleUseCases create and update', () => {
       make: 'Ferrari',
       model: 'Roma',
       registration: 'TEST 123',
+      registrationState: 'WA',
       currentOdometer: 0,
       odometerUnit: 'km',
       engine: '3.9L V8',
@@ -416,6 +420,7 @@ describe('VehicleUseCases create and update', () => {
       make: 'Ferrari',
       model: 'Roma',
       registration: 'TEST 123',
+      registrationState: 'WA',
     });
     expect(repository.create).toHaveBeenCalledWith(expected);
   });
@@ -424,7 +429,7 @@ describe('VehicleUseCases create and update', () => {
     const repository = createRepository();
     const duplicateWarning = {
       vehicleId: 'vehicle-duplicate',
-      label: '2021 Ferrari Roma · TEST 123',
+      label: '2021 Ferrari Roma · TEST 123 WA',
     };
     vi.mocked(repository.findDuplicate).mockResolvedValue(success(duplicateWarning));
 
@@ -438,7 +443,7 @@ describe('VehicleUseCases create and update', () => {
     const repository = createRepository();
     const duplicateWarning = {
       vehicleId: 'vehicle-duplicate',
-      label: '2021 Ferrari Roma · TEST 123',
+      label: '2021 Ferrari Roma · TEST 123 WA',
     };
     vi.mocked(repository.findDuplicate).mockResolvedValue(success(duplicateWarning));
 
@@ -449,6 +454,7 @@ describe('VehicleUseCases create and update', () => {
       make: 'Ferrari',
       model: 'Roma',
       registration: 'TEST 123',
+      registrationState: 'WA',
     }, vehicle.id);
     expect(repository.update).toHaveBeenCalledWith(vehicle.id, validInput);
   });

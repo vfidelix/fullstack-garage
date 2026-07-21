@@ -31,6 +31,7 @@ const vehicle: Vehicle = {
   model: 'Roma',
   year: 2021,
   registration: 'SYN 123',
+  registrationState: 'WA',
   vin: 'SYNTHETIC-VIN',
   currentOdometer: 12000,
   odometerUnit: 'km',
@@ -48,6 +49,7 @@ const activeVehicle: Vehicle = {
   model: 'Roma',
   year: 2021,
   registration: 'SYN 123',
+  registrationState: 'WA',
   vin: 'SYNTHETIC-VIN',
   currentOdometer: 12000,
   odometerUnit: 'km',
@@ -224,6 +226,7 @@ describe('Vehicle create workflow', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Add Vehicle' })).toBeVisible();
     expect(screen.getByRole('radio', { name: 'Kilometres' })).toBeChecked();
     expect(screen.getByRole('radio', { name: 'Miles' })).not.toBeChecked();
+    expect(screen.getByLabelText('Registration state')).toHaveValue('');
     expect(screen.queryByLabelText(/owner|archived|created|updated/iu))
       .not.toBeInTheDocument();
     const vehicleLinks = screen.getAllByRole('link', { name: 'Vehicles' });
@@ -282,6 +285,7 @@ describe('Vehicle create workflow', () => {
     await user.type(screen.getByLabelText('Model'), '  Roma  ');
     await user.type(screen.getByLabelText('Year'), '2021');
     await user.type(screen.getByLabelText('Registration'), '  SYN 123  ');
+    await user.selectOptions(screen.getByLabelText('Registration state'), 'WA');
     await user.type(screen.getByLabelText('VIN'), '  SYNTHETIC-VIN  ');
     await user.type(screen.getByLabelText('Current odometer'), '0');
     await user.click(screen.getByRole('radio', { name: 'Miles' }));
@@ -295,6 +299,7 @@ describe('Vehicle create workflow', () => {
         model: 'Roma',
         year: 2021,
         registration: 'SYN 123',
+        registrationState: 'WA',
         vin: 'SYNTHETIC-VIN',
         currentOdometer: 0,
         odometerUnit: 'mi',
@@ -304,7 +309,7 @@ describe('Vehicle create workflow', () => {
     });
     expect(await screen.findByRole('heading', {
       level: 1,
-      name: '2021 Ferrari Roma · SYN 123',
+      name: '2021 Ferrari Roma · SYN 123 WA',
     })).toBeVisible();
     const location = screen.getByRole('status', { name: 'Test location' });
     expect(location).toHaveTextContent('/vehicles/vehicle-1');
@@ -386,7 +391,7 @@ describe('Vehicle create workflow', () => {
 
     await user.click(screen.getByRole('button', { name: 'Add Vehicle' }));
     expect(await screen.findByRole('heading', {
-      name: '2021 Ferrari Roma · SYN 123',
+      name: '2021 Ferrari Roma · SYN 123 WA',
     })).toBeVisible();
     expect(createVehicle).toHaveBeenCalledTimes(2);
   });
@@ -449,6 +454,7 @@ describe('Vehicle detail and edit workflows', () => {
     const client = renderWorkflow('/vehicles/vehicle-1/edit', operations);
 
     await screen.findByDisplayValue('SYN 123');
+    expect(screen.getByLabelText('Registration state')).toHaveValue('WA');
     await user.click(screen.getByRole('button', { name: 'Save changes' }));
 
     expect(await screen.findByRole('status', { name: 'Duplicate warning' }))
@@ -464,7 +470,7 @@ describe('Vehicle detail and edit workflows', () => {
 
     expect(await screen.findByRole('heading', {
       level: 1,
-      name: '2021 Ferrari Roma · SYN 123',
+      name: '2021 Ferrari Roma · SYN 123 WA',
     })).toBeVisible();
     expect(screen.getByText('SYNTHETIC-VIN')).toBeVisible();
     expect(screen.getByText('12,000 km')).toBeVisible();
@@ -513,6 +519,7 @@ describe('Vehicle detail and edit workflows', () => {
         make: 'Ferrari',
         model: 'Roma',
         year: 2021,
+        registrationState: 'WA',
         vin: 'SYNTHETIC-VIN',
         currentOdometer: 12000,
         odometerUnit: 'mi',
@@ -571,7 +578,7 @@ describe('Vehicle detail and edit workflows', () => {
     await user.keyboard('{Enter}');
 
     expect(await screen.findByRole('heading', {
-      name: '2021 Ferrari Roma · SYN 123',
+      name: '2021 Ferrari Roma · SYN 123 WA',
     })).toBeVisible();
     expect(getVehicle).toHaveBeenCalledTimes(2);
   });
@@ -643,7 +650,7 @@ describe('Vehicle lifecycle workflows', () => {
     });
 
     expect(await screen.findByRole('article', {
-      name: '2021 Ferrari Roma · SYN 123',
+      name: '2021 Ferrari Roma · SYN 123 WA',
     })).toBeVisible();
     expect(screen.getByRole('status', { name: 'Test location' }))
       .toHaveTextContent('/vehicles/archived');
@@ -681,7 +688,7 @@ describe('Vehicle lifecycle workflows', () => {
     await user.click(screen.getByRole('button', { name: 'Archive Vehicle' }));
 
     expect(await screen.findByRole('article', {
-      name: '2021 Ferrari Roma · SYN 123',
+      name: '2021 Ferrari Roma · SYN 123 WA',
     })).toBeVisible();
     expect(archiveVehicle).toHaveBeenCalledTimes(2);
   });
@@ -705,7 +712,7 @@ describe('Vehicle lifecycle workflows', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Restore Vehicle' }));
 
     expect(await screen.findByRole('article', {
-      name: '2021 Ferrari Roma · SYN 123',
+      name: '2021 Ferrari Roma · SYN 123 WA',
     })).toBeVisible();
     expect(screen.getByRole('status', { name: 'Test location' }))
       .toHaveTextContent('/vehicles');
@@ -909,7 +916,7 @@ describe('Vehicle mutation authentication ownership', () => {
     await user.click(screen.getByRole('button', { name: 'Add Vehicle' }));
 
     expect(await screen.findByRole('heading', {
-      name: '2021 Ferrari Roma · SYN 123',
+      name: '2021 Ferrari Roma · SYN 123 WA',
     })).toBeVisible();
     expect(createVehicle).toHaveBeenCalledTimes(2);
   });

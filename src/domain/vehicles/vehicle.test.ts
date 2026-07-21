@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { AppUserId } from '../users/appUser';
 import {
   VEHICLE_ODOMETER_MAX,
+  AUSTRALIAN_REGISTRATION_STATES,
   countVehicleTextCharacters,
   findDuplicateVehicle,
   formatVehicleLabel,
@@ -27,6 +28,7 @@ function buildVehicle(overrides: Partial<Vehicle> = {}): Vehicle {
     model: 'Roma',
     year: 2021,
     registration: 'ABC 123',
+    registrationState: 'WA',
     vin: 'TESTVIN00000000001',
     currentOdometer: 12_500,
     odometerUnit: 'km',
@@ -82,6 +84,9 @@ describe('Vehicle domain contracts', () => {
       ...(vehicle.registration === undefined
         ? {}
         : { registration: vehicle.registration }),
+      ...(vehicle.registrationState === undefined
+        ? {}
+        : { registrationState: vehicle.registrationState }),
       ...(vehicle.currentOdometer === undefined
         ? {}
         : { currentOdometer: vehicle.currentOdometer }),
@@ -106,6 +111,7 @@ describe('Vehicle input normalization and validation', () => {
       make: '  Ferrari  ',
       model: '  Roma  ',
       registration: '  ABC 123  ',
+      registrationState: ' wa ',
       vin: '   ',
       currentOdometer: 0,
       odometerUnit: 'km',
@@ -117,6 +123,7 @@ describe('Vehicle input normalization and validation', () => {
       make: 'Ferrari',
       model: 'Roma',
       registration: 'ABC 123',
+      registrationState: 'WA',
       currentOdometer: 0,
       odometerUnit: 'km',
       engine: '3.9L V8',
@@ -305,6 +312,60 @@ describe('Vehicle input normalization and validation', () => {
     });
   });
 
+  it('normalizes blank and lowercase Australian registration states', () => {
+    expect(validateCreateVehicle({
+      make: 'Ferrari',
+      model: 'Roma',
+      registrationState: ' wa ',
+      odometerUnit: 'km',
+    })).toEqual({
+      valid: true,
+      value: {
+        make: 'Ferrari',
+        model: 'Roma',
+        registrationState: 'WA',
+        odometerUnit: 'km',
+      },
+    });
+    expect(validateCreateVehicle({
+      make: 'Ferrari',
+      model: 'Roma',
+      registrationState: ' ',
+      odometerUnit: 'km',
+    })).toEqual({
+      valid: true,
+      value: {
+        make: 'Ferrari',
+        model: 'Roma',
+        odometerUnit: 'km',
+      },
+    });
+  });
+
+  it('accepts only approved Australian registration states', () => {
+    for (const registrationState of AUSTRALIAN_REGISTRATION_STATES) {
+      expectValidCreate({
+        make: 'Ferrari',
+        model: 'Roma',
+        registrationState,
+        odometerUnit: 'km',
+      });
+    }
+
+    expect(validateCreateVehicle({
+      make: 'Ferrari',
+      model: 'Roma',
+      registrationState: 'NZ',
+      odometerUnit: 'km',
+    })).toEqual({
+      valid: false,
+      issues: [{
+        field: 'registrationState',
+        code: 'invalid_registration_state',
+      }],
+    });
+  });
+
   it('applies the same normalization and invariants to updates', () => {
     const result = validateUpdateVehicle({
       make: ' Ferrari ',
@@ -345,6 +406,7 @@ describe('Vehicle input normalization and validation', () => {
       model: ' ',
       year: 1800,
       registration: 'R'.repeat(51),
+      registrationState: 'NZ',
       vin: 'V'.repeat(51),
       currentOdometer: -1,
       odometerUnit: 'miles' as 'mi',
@@ -359,6 +421,7 @@ describe('Vehicle input normalization and validation', () => {
         { field: 'model', code: 'required' },
         { field: 'year', code: 'invalid_year' },
         { field: 'registration', code: 'too_long' },
+        { field: 'registrationState', code: 'invalid_registration_state' },
         { field: 'vin', code: 'too_long' },
         { field: 'currentOdometer', code: 'invalid_odometer' },
         { field: 'odometerUnit', code: 'invalid_odometer_unit' },
@@ -372,6 +435,8 @@ describe('Vehicle input normalization and validation', () => {
 describe('formatVehicleLabel', () => {
   it.each([
     [{ make: 'Ferrari', model: 'Roma', year: 2021, registration: 'ABC 123' }, '2021 Ferrari Roma · ABC 123'],
+    [{ make: 'Ferrari', model: 'Roma', year: 2021, registration: 'ABC 123', registrationState: 'WA' }, '2021 Ferrari Roma · ABC 123 WA'],
+    [{ make: 'Ferrari', model: 'Roma', year: 2021, registrationState: 'WA' }, '2021 Ferrari Roma'],
     [{ make: 'Ferrari', model: 'Roma', year: 2021 }, '2021 Ferrari Roma'],
     [{ make: 'Ferrari', model: 'Roma', registration: 'ABC 123' }, 'Ferrari Roma · ABC 123'],
     [{ make: 'Ferrari', model: 'Roma' }, 'Ferrari Roma'],
@@ -401,6 +466,7 @@ describe('duplicate Vehicle comparison', () => {
       make: 'Ferrari',
       model: 'Roma',
       registration: 'OTHER',
+      registrationState: 'WA',
       archivedAt: '2026-07-20T01:00:00.000Z',
     }),
   ];
@@ -410,6 +476,7 @@ describe('duplicate Vehicle comparison', () => {
       make: 'f E r r a r i',
       model: 'R O M A',
       registration: 'a b c 1 2 3',
+      registrationState: 'w a',
     })?.id).toBe('vehicle-1');
   });
 
@@ -418,6 +485,22 @@ describe('duplicate Vehicle comparison', () => {
       make: 'alfaromeo',
       model: 'giuliaquadrifoglio',
     })?.id).toBe('vehicle-2');
+  });
+
+  it('treats two missing registration states as equal', () => {
+    expect(findDuplicateVehicle(vehicles, {
+      make: 'alfaromeo',
+      model: 'giuliaquadrifoglio',
+    })?.id).toBe('vehicle-2');
+  });
+
+  it('does not match the same registration in a different registration state', () => {
+    expect(findDuplicateVehicle(vehicles, {
+      make: 'Ferrari',
+      model: 'Roma',
+      registration: 'ABC123',
+      registrationState: 'VIC',
+    })).toBeUndefined();
   });
 
   it('does not match a missing registration to a present registration', () => {
@@ -432,6 +515,7 @@ describe('duplicate Vehicle comparison', () => {
       make: 'Ferrari',
       model: 'Roma',
       registration: 'other',
+      registrationState: 'WA',
     })?.id).toBe('vehicle-3');
   });
 

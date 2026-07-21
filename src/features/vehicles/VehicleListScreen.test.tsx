@@ -26,6 +26,7 @@ const activeVehicles: readonly VehicleSummary[] = [
     model: 'Roma',
     year: 2021,
     registration: 'SYN 123',
+    registrationState: 'WA',
     currentOdometer: 123456,
     odometerUnit: 'km',
   },
@@ -68,6 +69,7 @@ const vehicle: Vehicle = {
   model: 'Roma',
   year: 2021,
   registration: 'SYN 123',
+  registrationState: 'WA',
   currentOdometer: 123456,
   odometerUnit: 'km',
   ownerId: 'owner-1',
@@ -162,7 +164,7 @@ describe('VehicleListScreen', () => {
     const list = await screen.findByRole('list', { name: 'Active Vehicles' });
     expect(within(list).getAllByRole('listitem')).toHaveLength(4);
     expect(screen.getByRole('article', {
-      name: '2021 Ferrari Roma · SYN 123',
+      name: '2021 Ferrari Roma · SYN 123 WA',
     })).toBeVisible();
     expect(screen.getByRole('article', {
       name: '2022 Ferrari 296 GTB',
@@ -179,7 +181,7 @@ describe('VehicleListScreen', () => {
       '/vehicles/new',
     );
     expect(screen.getByRole('link', {
-      name: '2021 Ferrari Roma · SYN 123',
+      name: '2021 Ferrari Roma · SYN 123 WA',
     })).toHaveAttribute('href', '/vehicles/vehicle-full-label');
     expect(operations.listActiveVehicles).toHaveBeenCalledOnce();
     expect(operations.listArchivedVehicles).not.toHaveBeenCalled();
@@ -278,15 +280,15 @@ describe('VehicleListScreen', () => {
 
     const list = await screen.findByRole('list', { name: 'Active Vehicles' });
     const firstRow = within(list).getByRole('article', {
-      name: '2021 Ferrari Roma · SYN 123',
+      name: '2021 Ferrari Roma · SYN 123 WA',
     });
 
     expect(within(firstRow).getByRole('heading', {
-      name: '2021 Ferrari Roma · SYN 123',
+      name: '2021 Ferrari Roma · SYN 123 WA',
       level: 3,
     })).toBeVisible();
     expect(within(firstRow).getByText('Registration', { selector: 'dt' })).toBeVisible();
-    expect(within(firstRow).getByText('SYN 123', { selector: 'dd' })).toBeVisible();
+    expect(within(firstRow).getByText('SYN 123 WA', { selector: 'dd' })).toBeVisible();
     expect(within(firstRow).getByText('Odometer', { selector: 'dt' })).toBeVisible();
     expect(within(firstRow).getByText('123,456 km', { selector: 'dd' })).toBeVisible();
     expect(screen.queryByRole('table')).not.toBeInTheDocument();

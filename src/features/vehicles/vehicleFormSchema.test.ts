@@ -19,6 +19,7 @@ function validValues(
     model: 'Roma',
     year: '',
     registration: '',
+    registrationState: '',
     vin: '',
     currentOdometer: '',
     odometerUnit: 'km',
@@ -34,6 +35,7 @@ describe('vehicleFormSchema', () => {
       make: '  Ferrari  ',
       model: '  Roma  ',
       registration: '   ',
+      registrationState: '',
       vin: '   ',
       engine: '   ',
       notes: '   ',
@@ -42,6 +44,23 @@ describe('vehicleFormSchema', () => {
       model: 'Roma',
       odometerUnit: 'km',
     });
+  });
+
+  it('persists the selected registration state and omits the blank option', () => {
+    expect(vehicleFormSchema.parse(validValues({
+      registration: '  SYN 123  ',
+      registrationState: 'wa' as 'WA',
+    }))).toMatchObject({
+      registration: 'SYN 123',
+      registrationState: 'WA',
+    });
+    expect(vehicleFormSchema.parse(validValues({
+      registration: 'SYN 123',
+      registrationState: '',
+    }))).not.toHaveProperty('registrationState');
+    expect(vehicleFormSchema.safeParse(validValues({
+      registrationState: 'NZ' as 'WA',
+    })).success).toBe(false);
   });
 
   it.each(['make', 'model'] as const)('requires trimmed %s', (field) => {
@@ -147,6 +166,7 @@ describe('vehicleFormSchema', () => {
       model: 'Roma',
       year: 2021,
       registration: 'SYN 123',
+      registrationState: 'WA',
       vin: 'SYNTHETIC-VIN',
       currentOdometer: 12000,
       odometerUnit: 'mi',
@@ -162,6 +182,7 @@ describe('vehicleFormSchema', () => {
       model: 'Roma',
       year: '2021',
       registration: 'SYN 123',
+      registrationState: 'WA',
       vin: 'SYNTHETIC-VIN',
       currentOdometer: '12000',
       odometerUnit: 'mi',

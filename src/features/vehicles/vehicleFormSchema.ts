@@ -7,6 +7,8 @@ import {
   VEHICLE_YEAR_MAX,
   VEHICLE_YEAR_MIN,
   countVehicleTextCharacters,
+  isAustralianRegistrationState,
+  type AustralianRegistrationState,
   type CreateVehicle,
   type OdometerUnit,
   type Vehicle,
@@ -17,6 +19,7 @@ export interface VehicleFormValues {
   readonly model: string;
   readonly year: string;
   readonly registration: string;
+  readonly registrationState: '' | AustralianRegistrationState;
   readonly vin: string;
   readonly currentOdometer: string;
   readonly odometerUnit: OdometerUnit;
@@ -29,6 +32,7 @@ const vehicleFormFields = [
   'model',
   'year',
   'registration',
+  'registrationState',
   'vin',
   'currentOdometer',
   'odometerUnit',
@@ -50,6 +54,13 @@ function optionalInteger(value: string): number | undefined {
   return normalized.length === 0 ? undefined : Number(normalized);
 }
 
+function optionalRegistrationState(
+  value: string,
+): AustralianRegistrationState | undefined {
+  const normalized = value.trim().toUpperCase();
+  return normalized === '' ? undefined : normalized as AustralianRegistrationState;
+}
+
 function isOdometerIntegerInRange(value: string): boolean {
   if (!/^\d+$/u.test(value)) {
     return false;
@@ -67,6 +78,7 @@ const rawVehicleFormSchema = z.object({
   model: z.string(),
   year: z.string(),
   registration: z.string(),
+  registrationState: z.string(),
   vin: z.string(),
   currentOdometer: z.string(),
   odometerUnit: z.enum(['km', 'mi'], {
@@ -82,6 +94,7 @@ export const vehicleFormSchema = rawVehicleFormSchema
     const model = values.model.trim();
     const year = values.year.trim();
     const odometer = values.currentOdometer.trim();
+    const registrationState = optionalRegistrationState(values.registrationState);
 
     if (countVehicleTextCharacters(make) === 0) {
       context.addIssue({
@@ -129,6 +142,17 @@ export const vehicleFormSchema = rawVehicleFormSchema
     }
 
     if (
+      registrationState !== undefined
+      && !isAustralianRegistrationState(registrationState)
+    ) {
+      context.addIssue({
+        code: 'custom',
+        message: 'Select an Australian state or territory.',
+        path: ['registrationState'],
+      });
+    }
+
+    if (
       countVehicleTextCharacters(values.notes.trim())
       > VEHICLE_NOTES_MAX_LENGTH
     ) {
@@ -163,6 +187,7 @@ export const vehicleFormSchema = rawVehicleFormSchema
   .transform((values): CreateVehicle => {
     const year = optionalInteger(values.year);
     const registration = optionalText(values.registration);
+    const registrationState = optionalRegistrationState(values.registrationState);
     const vin = optionalText(values.vin);
     const currentOdometer = optionalInteger(values.currentOdometer);
     const engine = optionalText(values.engine);
@@ -173,6 +198,7 @@ export const vehicleFormSchema = rawVehicleFormSchema
       model: values.model.trim(),
       ...(year === undefined ? {} : { year }),
       ...(registration === undefined ? {} : { registration }),
+      ...(registrationState === undefined ? {} : { registrationState }),
       ...(vin === undefined ? {} : { vin }),
       ...(currentOdometer === undefined ? {} : { currentOdometer }),
       odometerUnit: values.odometerUnit,
@@ -216,6 +242,7 @@ export function createVehicleFormDefaults(vehicle?: Vehicle): VehicleFormValues 
     model: vehicle?.model ?? '',
     year: vehicle?.year === undefined ? '' : String(vehicle.year),
     registration: vehicle?.registration ?? '',
+    registrationState: vehicle?.registrationState ?? '',
     vin: vehicle?.vin ?? '',
     currentOdometer: vehicle?.currentOdometer === undefined
       ? ''

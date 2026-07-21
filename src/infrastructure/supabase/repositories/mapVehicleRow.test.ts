@@ -9,6 +9,7 @@ const fullRow = {
   model: 'Roma',
   year: 2021,
   registration: 'TEST 123',
+  registration_state: 'WA',
   vin: 'SYNTHETIC-VIN',
   current_odometer: 12_500,
   odometer_unit: 'km',
@@ -29,6 +30,7 @@ describe('Vehicle Supabase row mapping', () => {
       model: 'Roma',
       year: 2021,
       registration: 'TEST 123',
+      registrationState: 'WA',
       vin: 'SYNTHETIC-VIN',
       currentOdometer: 12_500,
       odometerUnit: 'km',
@@ -47,6 +49,7 @@ describe('Vehicle Supabase row mapping', () => {
     });
     expect(mapVehicleSummaryRow(row)).toMatchObject({
       currentOdometer: VEHICLE_ODOMETER_MAX,
+      registrationState: 'WA',
     });
   });
 
@@ -65,6 +68,7 @@ describe('Vehicle Supabase row mapping', () => {
       make: row.make,
       model: row.model,
       registration: row.registration,
+      registrationState: 'WA',
       vin: row.vin,
       engine: row.engine,
       notes: row.notes,
@@ -73,8 +77,21 @@ describe('Vehicle Supabase row mapping', () => {
       make: row.make,
       model: row.model,
       registration: row.registration,
+      registrationState: 'WA',
     });
   });
+
+  it.each(['ACT', 'NSW', 'NT', 'QLD', 'SA', 'TAS', 'VIC', 'WA'] as const)(
+    'maps approved registration state %s',
+    (registration_state) => {
+      expect(mapVehicleRow({ ...fullRow, registration_state })).toMatchObject({
+        registrationState: registration_state,
+      });
+      expect(mapVehicleSummaryRow({ ...fullRow, registration_state })).toMatchObject({
+        registrationState: registration_state,
+      });
+    },
+  );
 
   it.each([
     ['make', 51],
@@ -97,6 +114,7 @@ describe('Vehicle Supabase row mapping', () => {
       model: ' Roma ',
       year: null,
       registration: ' ',
+      registration_state: null,
       vin: null,
       current_odometer: null,
       engine: null,
@@ -123,6 +141,8 @@ describe('Vehicle Supabase row mapping', () => {
     { ...fullRow, current_odometer: -1 },
     { ...fullRow, current_odometer: VEHICLE_ODOMETER_MAX + 1 },
     { ...fullRow, odometer_unit: 'miles' },
+    { ...fullRow, registration_state: 'NZ' },
+    { ...fullRow, registration_state: 'wa' },
     { ...fullRow, notes: 'x'.repeat(501) },
     { ...fullRow, created_at: 'not-a-timestamp' },
   ])('rejects a malformed full row %#', (row) => {
@@ -136,6 +156,7 @@ describe('Vehicle Supabase row mapping', () => {
       model: fullRow.model,
       year: fullRow.year,
       registration: fullRow.registration,
+      registration_state: fullRow.registration_state,
       current_odometer: fullRow.current_odometer,
       odometer_unit: fullRow.odometer_unit,
       archived_at: fullRow.archived_at,
@@ -147,6 +168,7 @@ describe('Vehicle Supabase row mapping', () => {
       model: 'Roma',
       year: 2021,
       registration: 'TEST 123',
+      registrationState: 'WA',
       currentOdometer: 12_500,
       odometerUnit: 'km',
     });

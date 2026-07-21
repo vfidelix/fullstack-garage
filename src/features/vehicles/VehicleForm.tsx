@@ -1,6 +1,7 @@
 import { Save } from 'lucide-react';
 import { useForm, useWatch } from 'react-hook-form';
 import {
+  AUSTRALIAN_REGISTRATION_STATES,
   VEHICLE_NOTES_MAX_LENGTH,
   VEHICLE_ODOMETER_MAX,
   VEHICLE_TEXT_MAX_LENGTH,
@@ -27,6 +28,7 @@ const validationMessages = {
   required: 'This field is required.',
   too_long: 'This value is too long.',
   invalid_year: 'Enter a whole-number year from 1900 to 9999.',
+  invalid_registration_state: 'Select an Australian state or territory.',
   invalid_odometer: 'Enter a non-negative whole number.',
   invalid_odometer_unit: 'Select kilometres or miles.',
 } as const;
@@ -192,6 +194,28 @@ export function VehicleForm({
           {errors.registration?.message !== undefined && (
             <p className={styles.fieldError} id="vehicle-registration-error">
               {errors.registration.message}
+            </p>
+          )}
+        </div>
+
+        <div className={styles.field}>
+          <label htmlFor="vehicle-registration-state">Registration state</label>
+          <select
+            {...register('registrationState')}
+            aria-describedby={errors.registrationState === undefined
+              ? undefined
+              : 'vehicle-registration-state-error'}
+            aria-invalid={errors.registrationState !== undefined}
+            id="vehicle-registration-state"
+          >
+            <option value="">Not recorded</option>
+            {AUSTRALIAN_REGISTRATION_STATES.map((state) => (
+              <option key={state} value={state}>{state}</option>
+            ))}
+          </select>
+          {errors.registrationState?.message !== undefined && (
+            <p className={styles.fieldError} id="vehicle-registration-state-error">
+              {errors.registrationState.message}
             </p>
           )}
         </div>

@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select extensions.plan(75);
+select extensions.plan(80);
 
 create function pg_temp.sqlstate_for(p_statement text)
 returns text
@@ -49,6 +49,7 @@ insert into public.vehicles (
   model,
   year,
   registration,
+  registration_state,
   vin,
   current_odometer,
   odometer_unit,
@@ -64,6 +65,7 @@ values
     'Active Model',
     2024,
     'SYN ACTIVE',
+    'WA',
     'SYNTHETIC-VIN-ACTIVE',
     12000,
     'km',
@@ -78,6 +80,7 @@ values
     'Archived Model',
     2023,
     'SYN ARCHIVE',
+    null,
     null,
     8000,
     'mi',
@@ -112,60 +115,95 @@ select extensions.is(
   'Active Model'::text,
   'mapped admin can get one Vehicle'
 );
-
-insert into public.vehicles (id, make, model)
-values (
-  '23000000-0000-4000-8000-000000000003',
-  'Created Make',
-  'Created Model'
-);
-
 select extensions.is(
   (
-    select owner_id
+    select registration_state
     from public.vehicles
-    where id = '23000000-0000-4000-8000-000000000003'
+    where id = '23000000-0000-4000-8000-000000000001'
   ),
-  '21000000-0000-4000-8000-000000000001'::uuid,
-  'mapped admin can create a Vehicle and ownership comes from the caller'
+  'WA'::text,
+  'mapped admin can read persisted registration state'
+);
+select extensions.is(
+  (
+    select registration_state
+    from public.vehicles
+    where id = '23000000-0000-4000-8000-000000000002'
+  ),
+  null::text,
+  'existing compatible Vehicles may omit registration state'
+);
+
+insert into public.vehicles (make, model, registration_state)
+values (
+  'Created Make',
+  'Created Model',
+  'NSW'
+);
+
+select extensions.ok(
+  (
+    select owner_id
+      = '21000000-0000-4000-8000-000000000001'::uuid
+      and registration_state = 'NSW'
+    from public.vehicles
+    where make = 'Created Make'
+      and model = 'Created Model'
+  ),
+  'mapped admin can create a Vehicle with registration state and caller-owned ownership'
 );
 
 update public.vehicles
-set model = 'Updated Model'
-where id = '23000000-0000-4000-8000-000000000003';
+set model = 'Updated Model',
+  registration_state = 'VIC'
+where make = 'Created Make'
+  and model = 'Created Model';
 
-select extensions.is(
+select extensions.ok(
   (
-    select model
+    select model = 'Updated Model'
+      and registration_state = 'VIC'
     from public.vehicles
-    where id = '23000000-0000-4000-8000-000000000003'
+    where make = 'Created Make'
+      and model = 'Updated Model'
   ),
-  'Updated Model'::text,
-  'mapped admin can update a Vehicle'
+  'mapped admin can update a Vehicle registration state'
 );
 select extensions.ok(
   (
     select archived_at is not null
-    from public.archive_vehicle('23000000-0000-4000-8000-000000000003')
+    from public.archive_vehicle((
+      select id
+      from public.vehicles
+      where make = 'Created Make'
+        and model = 'Updated Model'
+    ))
   ),
   'mapped admin can archive an active Vehicle atomically'
 );
 select extensions.ok(
   (
     select archived_at is null
-    from public.restore_vehicle('23000000-0000-4000-8000-000000000003')
+    from public.restore_vehicle((
+      select id
+      from public.vehicles
+      where make = 'Created Make'
+        and model = 'Updated Model'
+    ))
   ),
   'mapped admin can restore an archived Vehicle atomically'
 );
 
 delete from public.vehicles
-where id = '23000000-0000-4000-8000-000000000003';
+where make = 'Created Make'
+  and model = 'Updated Model';
 
 select extensions.is(
   (
     select count(*)::integer
     from public.vehicles
-    where id = '23000000-0000-4000-8000-000000000003'
+    where make = 'Created Make'
+      and model = 'Updated Model'
   ),
   0,
   'mapped admin can permanently delete a current Vehicle'
@@ -642,6 +680,53 @@ select extensions.is(
   ),
   '23514'::text,
   'registration cannot exceed 50 characters'
+);
+select extensions.is(
+  pg_temp.sqlstate_for(
+    $statement$
+      insert into public.vehicles (owner_id, make, model, registration_state)
+      values (
+        '21000000-0000-4000-8000-000000000001',
+        'Constraint Make',
+        'Constraint Model',
+        'NZ'
+      )
+    $statement$
+  ),
+  '23514'::text,
+  'registration state must be an approved Australian code'
+);
+select extensions.is(
+  pg_temp.sqlstate_for(
+    $statement$
+      insert into public.vehicles (owner_id, make, model, registration_state)
+      values (
+        '21000000-0000-4000-8000-000000000001',
+        'Constraint Make',
+        'Constraint Model',
+        'wa'
+      )
+    $statement$
+  ),
+  '23514'::text,
+  'registration state rejects lowercase codes'
+);
+insert into public.vehicles (owner_id, make, model, registration_state)
+select
+  '21000000-0000-4000-8000-000000000001',
+  'Allowed State Make',
+  'Allowed State ' || code,
+  code
+from unnest(array['ACT', 'NSW', 'NT', 'QLD', 'SA', 'TAS', 'VIC', 'WA']) as code;
+
+select extensions.is(
+  (
+    select count(*)::integer
+    from public.vehicles
+    where make = 'Allowed State Make'
+  ),
+  8,
+  'all approved registration state codes are accepted'
 );
 select extensions.is(
   pg_temp.sqlstate_for(

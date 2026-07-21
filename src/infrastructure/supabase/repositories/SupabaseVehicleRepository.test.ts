@@ -125,6 +125,7 @@ const activeRow = {
   model: 'Roma',
   year: 2021,
   registration: 'TEST 123',
+  registration_state: 'WA',
   vin: 'SYNTHETIC-VIN',
   current_odometer: 12_500,
   odometer_unit: 'km',
@@ -148,6 +149,7 @@ function summaryRow(row: typeof activeRow | typeof archivedRow) {
     model: row.model,
     year: row.year,
     registration: row.registration,
+    registration_state: row.registration_state,
     current_odometer: row.current_odometer,
     odometer_unit: row.odometer_unit,
     archived_at: row.archived_at,
@@ -212,6 +214,7 @@ describe('SupabaseVehicleRepository', () => {
       make: ' Ferrari ',
       model: ' Roma ',
       registration: ' TEST 123 ',
+      registrationState: ' wa ',
       odometerUnit: 'km' as const,
     };
 
@@ -236,6 +239,7 @@ describe('SupabaseVehicleRepository', () => {
       make: 'Ferrari',
       model: 'Roma',
       registration: 'TEST 123',
+      registration_state: 'WA',
       odometer_unit: 'km',
     }));
     expect(writes[0]?.arguments[0]).not.toHaveProperty('owner_id');
@@ -274,6 +278,7 @@ describe('SupabaseVehicleRepository', () => {
       make: nonBmpCharacter.repeat(50),
       model: nonBmpCharacter.repeat(50),
       registration: nonBmpCharacter.repeat(50),
+      registration_state: 'TAS',
       vin: nonBmpCharacter.repeat(50),
       engine: nonBmpCharacter.repeat(50),
       notes: nonBmpCharacter.repeat(500),
@@ -292,6 +297,7 @@ describe('SupabaseVehicleRepository', () => {
       make: boundaryRow.make,
       model: boundaryRow.model,
       registration: boundaryRow.registration,
+      registrationState: 'TAS',
       vin: boundaryRow.vin,
       odometerUnit: 'km' as const,
       engine: boundaryRow.engine,
@@ -314,6 +320,21 @@ describe('SupabaseVehicleRepository', () => {
       ok: true,
       value: { registration: boundaryRow.registration },
     });
+  });
+
+  it('validates registration state writes before calling the provider', async () => {
+    const { client, repository } = createHarness();
+
+    await expect(repository.create({
+      make: 'Ferrari',
+      model: 'Roma',
+      registrationState: 'NZ',
+      odometerUnit: 'km',
+    })).resolves.toMatchObject({
+      ok: false,
+      error: { category: 'validation' },
+    });
+    expect(client.calls).toEqual([]);
   });
 
   it('rejects over-bound non-BMP create and update values before writes', async () => {
@@ -410,13 +431,14 @@ describe('SupabaseVehicleRepository', () => {
       make: ' FERRARI ',
       model: 'ro ma',
       registration: 'test123',
+      registrationState: 'wa',
     };
 
     await expect(repository.findDuplicate(candidate)).resolves.toEqual({
       ok: true,
       value: {
         vehicleId,
-        label: '2021 Ferrari Roma · TEST 123',
+        label: '2021 Ferrari Roma · TEST 123 WA',
       },
     });
     await expect(
@@ -425,8 +447,23 @@ describe('SupabaseVehicleRepository', () => {
       ok: true,
       value: {
         vehicleId: secondVehicleId,
-        label: '2021 Ferrari Roma · TEST 123',
+        label: '2021 Ferrari Roma · TEST 123 WA',
       },
+    });
+  });
+
+  it('does not warn for a same-registration duplicate in another state', async () => {
+    const rows = [summaryRow(activeRow), summaryRow(archivedRow)];
+    const { repository } = createHarness(response(rows));
+
+    await expect(repository.findDuplicate({
+      make: 'Ferrari',
+      model: 'Roma',
+      registration: 'TEST 123',
+      registrationState: 'VIC',
+    })).resolves.toEqual({
+      ok: true,
+      value: undefined,
     });
   });
 

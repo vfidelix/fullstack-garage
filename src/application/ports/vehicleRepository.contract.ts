@@ -119,7 +119,7 @@ export function describeVehicleRepositoryContract(
   createHarness: CreateVehicleRepositoryContractHarness,
 ): void {
   describe(`${adapterName} VehicleRepository contract`, () => {
-    it('creates, reads, and updates a Vehicle including its current odometer unit', async () => {
+    it('creates, reads, and updates a Vehicle including registration state and odometer unit', async () => {
       const { fixtures, repository } = createHarness();
 
       const created = await repository.create(fixtures.createInput);
@@ -129,6 +129,7 @@ export function describeVehicleRepositoryContract(
           id: fixtures.createdVehicleId,
           make: fixtures.createInput.make,
           model: fixtures.createInput.model,
+          registrationState: fixtures.createInput.registrationState,
           currentOdometer: fixtures.createInput.currentOdometer,
           odometerUnit: 'km',
         },
@@ -212,13 +213,14 @@ export function describeVehicleRepositoryContract(
         make: ' FERRARI ',
         model: 'ro ma',
         registration: 'test123',
+        registrationState: 'wa',
       };
 
       await expect(repository.findDuplicate(duplicateInput)).resolves.toEqual({
         ok: true,
         value: {
           vehicleId: fixtures.archivedDuplicateVehicle.id,
-          label: '2021 Ferrari Roma · TEST 123',
+          label: '2021 Ferrari Roma · TEST 123 WA',
         },
       });
       await expect(repository.findDuplicate(
@@ -228,8 +230,16 @@ export function describeVehicleRepositoryContract(
         ok: true,
         value: {
           vehicleId: fixtures.activeVehicle.id,
-          label: '2021 Ferrari Roma · TEST 123',
+          label: '2021 Ferrari Roma · TEST 123 WA',
         },
+      });
+
+      await expect(repository.findDuplicate({
+        ...duplicateInput,
+        registrationState: 'VIC',
+      })).resolves.toEqual({
+        ok: true,
+        value: undefined,
       });
 
       const savedDuplicate = await repository.create(duplicateInput);

@@ -29,6 +29,7 @@
 }
 
 .field input,
+.field select,
 .field textarea {
   background: var(--color-canvas);
   border: var(--border-width-hairline) solid var(--color-body);
@@ -44,17 +45,23 @@
   width: 100%;
 }
 
+.field select {
+  appearance: none;
+}
+
 .field textarea {
   min-height: var(--textarea-min-height);
   resize: vertical;
 }
 
 .field input:hover,
+.field select:hover,
 .field textarea:hover {
   border-color: var(--color-ink);
 }
 
 .field input:focus-visible,
+.field select:focus-visible,
 .field textarea:focus-visible,
 .segmentedControl input:focus-visible + span,
 .submitButton:focus-visible {
@@ -63,6 +70,7 @@
 }
 
 .field input[aria-invalid='true'],
+.field select[aria-invalid='true'],
 .field textarea[aria-invalid='true'] {
   border-color: var(--color-warning);
 }
@@ -208,6 +216,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .field input,
+  .field select,
   .field textarea,
   .segmentedControl span,
   .submitButton {

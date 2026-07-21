@@ -43,12 +43,13 @@ scope and language.
     notes accept at most 500 characters.
 14. A new Vehicle form defaults the odometer unit to kilometres (`km`).
 15. Compact Vehicle labels use make and model, with year prepended when present
-    and registration appended after ` · ` when present.
+    and registration appended after ` · ` when present. When a registration
+    state is present, it is displayed with the registration.
 16. Duplicate-looking Vehicles are accepted. The UI shows a non-blocking warning
-    when another active or archived Vehicle has the same make, model, and
-    registration after capitalization and spaces are ignored. A missing
-    registration matches another missing registration, and the current Vehicle
-    is excluded when editing.
+    when another active or archived Vehicle has the same make, model,
+    registration, and registration state after capitalization and spaces are
+    ignored. Missing registration and registration state values match other
+    missing values, and the current Vehicle is excluded when editing.
 
 ## 3. Operating Model
 
@@ -85,7 +86,9 @@ The MVP does not include:
 - Fleet or business account management.
 - Legal or real-world Vehicle owner data.
 - Customer profiles, contact management, member accounts, or friend login access.
-- Vehicle data lookup by registration or VIN.
+- Vehicle data lookup by VIN.
+- Vehicle data lookup by registration, which is owned by the
+  [PlateAPI Vehicle Prefill](plateapi-vehicle-prefill.md) feature.
 - Odometer conversion between kilometres and miles.
 - Vehicle images, documents, or receipt storage.
 - Automated service reminders.
@@ -102,6 +105,7 @@ A Vehicle contains:
 | `model` | Yes | Trimmed, non-empty text; maximum 50 characters. |
 | `year` | No | Integer from 1900 through 9999 inclusive. |
 | `registration` | No | Private data; not globally unique; maximum 50 characters. |
+| `registrationState` | No | Australian registration state or territory code: `ACT`, `NSW`, `NT`, `QLD`, `SA`, `TAS`, `VIC`, or `WA`. |
 | `vin` | No | Private data; not globally unique; maximum 50 characters. |
 | `currentOdometer` | No | A non-negative whole number. |
 | `odometerUnit` | Yes | `km` or `mi`. |
@@ -116,11 +120,21 @@ state from forms. Those values are set by the authenticated workflow or the
 repository. Any future reassignment workflow must be a separate, explicit use
 case.
 
-The domain should use an explicit union for the unit rather than an unrestricted
-string:
+The domain should use explicit unions for constrained values rather than
+unrestricted strings:
 
 ```ts
 export type OdometerUnit = 'km' | 'mi';
+
+export type AustralianRegistrationState =
+  | 'ACT'
+  | 'NSW'
+  | 'NT'
+  | 'QLD'
+  | 'SA'
+  | 'TAS'
+  | 'VIC'
+  | 'WA';
 ```
 
 ## 6. Business Rules
@@ -129,13 +143,17 @@ export type OdometerUnit = 'km' | 'mi';
 - Year, when supplied, must be an integer from 1900 through 9999 inclusive.
 - Make, model, registration, VIN, and engine must not exceed 50 characters;
   notes must not exceed 500 characters.
+- Registration state, when supplied, must be one of `ACT`, `NSW`, `NT`, `QLD`,
+  `SA`, `TAS`, `VIC`, or `WA`.
 - Current odometer, when supplied, must be zero or greater and contain no
   fractional value.
-- Registration and VIN are optional and are not uniqueness keys.
+- Registration, registration state, and VIN are optional and are not uniqueness
+  keys.
 - Duplicate-looking Vehicles remain valid and may be saved. Duplicate comparison
-  ignores capitalization and spaces in make, model, and registration; two
-  missing registrations compare as the same missing value. The comparison spans
-  active and archived Vehicles and excludes the Vehicle currently being edited.
+  ignores capitalization and spaces in make, model, registration, and
+  registration state; missing registration and registration state values compare
+  as the same missing value. The comparison spans active and archived Vehicles
+  and excludes the Vehicle currently being edited.
 - Vehicle access requires the authenticated Garage Admin established by the
   Authentication and Access feature.
 - The Garage Admin may manage every Vehicle.
@@ -204,8 +222,11 @@ the stable app-owned `AppUserId` that authentication supplies.
 The `vehicles` table defined by the architecture requires these additions:
 
 - `odometer_unit text not null default 'km'`
+- `registration_state text`
 - `archived_at timestamptz`
 - A check constraint limiting `odometer_unit` to `km` or `mi`.
+- A check constraint limiting `registration_state` to `ACT`, `NSW`, `NT`, `QLD`,
+  `SA`, `TAS`, `VIC`, or `WA` when present.
 
 The table also requires:
 
@@ -261,9 +282,10 @@ versioned Supabase migration.
   explanation. These two states are deferred from the initial Vehicle delivery
   under Section 9.
 - A new Vehicle form defaults its odometer unit to kilometres.
-- Compact labels render as `2021 Ferrari Roma · ABC 123`, `2021 Ferrari Roma`,
-  `Ferrari Roma · ABC 123`, or `Ferrari Roma` according to which optional
-  year and registration values are present.
+- Compact labels render as `2021 Ferrari Roma · ABC 123 WA`,
+  `2021 Ferrari Roma · ABC 123`, `2021 Ferrari Roma`, `Ferrari Roma · ABC 123
+  WA`, `Ferrari Roma · ABC 123`, or `Ferrari Roma` according to which optional
+  year, registration, and registration state values are present.
 - A matching active or archived Vehicle produces a non-blocking duplicate
   warning but never prevents saving.
 - Forms mirror domain validation for immediate feedback, while repositories and
@@ -277,8 +299,8 @@ The Vehicle feature is ready to enable Service Records when it can provide:
 
 - A stable `VehicleId` and the Garage Admin's app-owned data relationship.
 - An active-Vehicle list for Service Record creation.
-- Vehicle make, model, year, registration, VIN, odometer unit, and engine details
-  for history displays and export snapshots.
+- Vehicle make, model, year, registration, registration state, VIN, odometer
+  unit, and engine details for history displays and export snapshots.
 - A database-level ownership relationship from Service Records to Vehicles.
 - A lifecycle that preserves Vehicles referenced by historical records.
 - Server-enforced access that lets the Garage Admin manage all Service Records.
@@ -304,11 +326,12 @@ Unit tests should cover:
 - The 1900 and 9999 year boundaries and rejected values outside them.
 - Approved field-length boundaries.
 - Supported odometer units.
+- Supported Australian registration state codes and rejected unsupported codes.
 - Non-negative whole-number odometers.
 - Active and archived state behavior.
 - Compact label fallbacks.
 - Duplicate comparison ignoring capitalization and spaces, including missing
-  registration and current-Vehicle exclusion.
+  registration, missing registration state, and current-Vehicle exclusion.
 - Vehicle creation input excluding `ownerId` and authentication data.
 
 Repository contract tests should cover:
@@ -343,3 +366,8 @@ Resolved on 2026-07-20:
    placeholder Service Record schema is created; history-dependent deletion and
    odometer-unit enforcement remains explicit deferred Service Record integration
    work.
+
+Resolved on 2026-07-21:
+
+7. Vehicles may store an optional Australian registration state or territory code
+   to support registration lookup and clearer registration display.
