@@ -1,0 +1,454 @@
+.page {
+  margin-inline: auto;
+  max-width: var(--content-max-width);
+  padding: var(--space-lg);
+}
+
+.pageHeader {
+  align-items: end;
+  display: flex;
+  gap: var(--space-sm);
+  justify-content: space-between;
+  margin-bottom: var(--space-md);
+}
+
+.titleBlock {
+  min-width: 0;
+}
+
+.eyebrow,
+.detail dt {
+  color: var(--color-body);
+  font-size: var(--font-size-caption);
+  line-height: var(--line-height-caption);
+}
+
+.eyebrow,
+.detail dt {
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-caption);
+  text-transform: uppercase;
+}
+
+.eyebrow {
+  margin: 0 0 var(--space-xxs);
+}
+
+.pageTitle {
+  font-size: var(--font-size-display-lg);
+  font-weight: var(--font-weight-display);
+  letter-spacing: 0;
+  line-height: var(--line-height-display-lg);
+  margin: 0;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+
+.headerActions {
+  align-items: center;
+  display: flex;
+  flex: none;
+  gap: var(--space-xs);
+}
+
+.backLink,
+.editLink,
+.retryButton,
+.archiveButton,
+.restoreButton,
+.deleteButton,
+.dialogCancelButton,
+.dialogConfirmButton,
+.dialogDeleteButton {
+  align-items: center;
+  border-radius: var(--radius-none);
+  display: inline-flex;
+  font-size: var(--font-size-button);
+  font-weight: var(--font-weight-bold);
+  gap: var(--space-xxs);
+  justify-content: center;
+  letter-spacing: var(--letter-spacing-button);
+  line-height: var(--line-height-button);
+  min-height: var(--control-height);
+  padding-inline: var(--space-xs);
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.backLink,
+.retryButton,
+.archiveButton,
+.restoreButton,
+.dialogCancelButton {
+  background: transparent;
+  border: var(--border-width-hairline) solid var(--color-ink);
+  color: var(--color-ink);
+}
+
+.editLink {
+  background: var(--color-primary);
+  border: var(--border-width-hairline) solid var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.retryButton {
+  cursor: pointer;
+}
+
+.archiveButton,
+.restoreButton,
+.deleteButton,
+.dialogCancelButton,
+.dialogConfirmButton,
+.dialogDeleteButton,
+.dialogCloseButton {
+  cursor: pointer;
+}
+
+.deleteButton,
+.dialogDeleteButton {
+  background: var(--color-primary);
+  border: var(--border-width-hairline) solid var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.dialogConfirmButton {
+  background: var(--color-ink);
+  border: var(--border-width-hairline) solid var(--color-ink);
+  color: var(--color-canvas);
+}
+
+.archiveButton,
+.restoreButton,
+.deleteButton,
+.dialogCancelButton,
+.dialogConfirmButton,
+.dialogDeleteButton,
+.dialogCloseButton {
+  transition-duration: var(--motion-fast);
+  transition-property: background-color, border-color, color, opacity, transform;
+  transition-timing-function: ease;
+}
+
+.archiveButton:hover,
+.restoreButton:hover,
+.dialogCancelButton:hover {
+  border-color: var(--color-body);
+  color: var(--color-body);
+}
+
+.deleteButton:hover,
+.dialogDeleteButton:hover {
+  background: var(--color-primary-hover);
+  border-color: var(--color-primary-hover);
+}
+
+.dialogConfirmButton:hover {
+  background: var(--color-body);
+  border-color: var(--color-body);
+}
+
+.dialogCloseButton:hover {
+  color: var(--color-body);
+}
+
+.archiveButton:active,
+.restoreButton:active,
+.deleteButton:active,
+.dialogCancelButton:active,
+.dialogConfirmButton:active,
+.dialogDeleteButton:active,
+.dialogCloseButton:active {
+  transform: scale(0.98);
+}
+
+.backLink:focus-visible,
+.editLink:focus-visible,
+.retryButton:focus-visible,
+.archiveButton:focus-visible,
+.restoreButton:focus-visible,
+.deleteButton:focus-visible,
+.dialogCancelButton:focus-visible,
+.dialogConfirmButton:focus-visible,
+.dialogDeleteButton:focus-visible,
+.dialogCloseButton:focus-visible,
+.dialog:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-focus);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.archiveButton:disabled,
+.restoreButton:disabled,
+.deleteButton:disabled,
+.dialogCancelButton:disabled,
+.dialogConfirmButton:disabled,
+.dialogDeleteButton:disabled,
+.dialogCloseButton:disabled {
+  cursor: wait;
+  opacity: 0.56;
+}
+
+.icon,
+.statusIcon,
+.spinner {
+  height: var(--icon-size);
+  width: var(--icon-size);
+}
+
+.duplicateWarning {
+  border-left: var(--nav-active-border-width) solid var(--color-warning);
+  margin-bottom: var(--space-md);
+  max-width: var(--copy-max-width);
+  padding: var(--space-xs);
+}
+
+.duplicateWarning strong,
+.duplicateWarning p {
+  display: block;
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-body);
+  margin: 0;
+  overflow-wrap: anywhere;
+  text-wrap: pretty;
+}
+
+.duplicateWarning p {
+  color: var(--color-body);
+  margin-top: var(--space-xxs);
+}
+
+.detailGrid {
+  border-top: var(--border-width-hairline) solid var(--color-hairline);
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0;
+}
+
+.detail {
+  border-bottom: var(--border-width-hairline) solid var(--color-hairline);
+  min-width: 0;
+  padding: var(--space-sm) var(--space-xs);
+}
+
+.detailFull {
+  grid-column: 1 / -1;
+}
+
+.detail dt,
+.detail dd {
+  margin: 0;
+}
+
+.detail dd {
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-body);
+  margin-top: var(--space-xxs);
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.numericValue {
+  font-variant-numeric: tabular-nums;
+}
+
+.lifecycleSection {
+  align-items: end;
+  border-bottom: var(--border-width-hairline) solid var(--color-hairline);
+  display: flex;
+  gap: var(--space-sm);
+  justify-content: space-between;
+  padding: var(--space-md) var(--space-xs);
+}
+
+.lifecycleSection .eyebrow {
+  margin-bottom: var(--space-xxs);
+}
+
+.lifecycleTitle {
+  font-size: var(--font-size-title-md);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0;
+  line-height: var(--line-height-title-md);
+  margin: 0;
+}
+
+.lifecycleActions {
+  align-items: center;
+  display: flex;
+  gap: var(--space-xs);
+}
+
+.dialogBackdrop {
+  align-items: center;
+  background: var(--dialog-backdrop);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: var(--space-md);
+  position: fixed;
+  z-index: var(--dialog-layer);
+}
+
+.dialog {
+  background: var(--color-canvas-elevated);
+  border-top: var(--nav-active-border-width) solid var(--color-primary);
+  max-height: calc(100vh - var(--space-xl));
+  max-width: var(--dialog-max-width);
+  overflow-y: auto;
+  padding: var(--space-md);
+  width: 100%;
+}
+
+.dialogHeader {
+  align-items: start;
+  display: flex;
+  gap: var(--space-xs);
+  justify-content: space-between;
+}
+
+.dialogTitle {
+  font-size: var(--font-size-title-md);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0;
+  line-height: var(--line-height-title-md);
+  margin: 0;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+
+.dialogCloseButton {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: var(--color-ink);
+  display: inline-flex;
+  flex: none;
+  height: var(--control-height);
+  justify-content: center;
+  margin: calc(var(--space-xs) * -1);
+  width: var(--control-height);
+}
+
+.dialogDescription,
+.dialogError {
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-body);
+  margin: var(--space-sm) 0 0;
+  overflow-wrap: anywhere;
+  text-wrap: pretty;
+}
+
+.dialogDescription {
+  color: var(--color-body);
+}
+
+.dialogError {
+  border-left: var(--nav-active-border-width) solid var(--color-warning);
+  padding-left: var(--space-xs);
+}
+
+.dialogActions {
+  display: flex;
+  gap: var(--space-xs);
+  justify-content: end;
+  margin-top: var(--space-md);
+}
+
+.statusPanel {
+  align-items: start;
+  border-block: var(--border-width-hairline) solid var(--color-hairline);
+  color: var(--color-body);
+  display: grid;
+  gap: var(--space-xs);
+  justify-items: start;
+  padding-block: var(--space-lg);
+}
+
+.statusPanel p {
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-body);
+  margin: 0;
+  max-width: var(--copy-max-width);
+  text-wrap: pretty;
+}
+
+.spinner {
+  animation: workflow-spin var(--motion-loading) linear infinite;
+}
+
+@keyframes workflow-spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+@media (max-width: 63.99rem) {
+  .detailGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 39.99rem) {
+  .page {
+    padding: var(--space-sm);
+  }
+
+  .pageHeader {
+    align-items: stretch;
+    display: grid;
+    margin-bottom: var(--space-sm);
+  }
+
+  .headerActions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .headerActions > :only-child {
+    grid-column: 1 / -1;
+  }
+
+  .detailGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .detailFull {
+    grid-column: auto;
+  }
+
+  .lifecycleSection,
+  .lifecycleActions,
+  .dialogActions {
+    align-items: stretch;
+    display: grid;
+  }
+
+  .archiveButton,
+  .restoreButton,
+  .deleteButton,
+  .dialogCancelButton,
+  .dialogConfirmButton,
+  .dialogDeleteButton {
+    width: 100%;
+  }
+
+  .dialogBackdrop {
+    align-items: end;
+    padding: var(--space-xs);
+  }
+
+  .dialog {
+    max-height: calc(100vh - var(--space-md));
+    padding: var(--space-sm);
+  }
+
+  .retryButton {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+  }
+}

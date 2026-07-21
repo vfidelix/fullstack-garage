@@ -1,9 +1,9 @@
-import { LayoutDashboard, LogOut } from 'lucide-react';
+import { CarFront, LayoutDashboard, LogOut } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { NavLink } from 'react-router-dom';
 import type { AppUser } from '../../domain/users/appUser';
 import brandLogo from '../../shared/assets/brand/Fullstack-Garage-Logo-Transparent.png';
-import { DASHBOARD_PATH } from '../routes/routePaths';
+import { DASHBOARD_PATH, VEHICLES_PATH } from '../routes/routePaths';
 import styles from './AuthenticatedAppShell.module.css';
 
 interface AuthenticatedAppShellProps {
@@ -40,6 +40,17 @@ export function AuthenticatedAppShell({
             >
               <LayoutDashboard aria-hidden="true" className={styles.icon} />
               <span>Dashboard</span>
+            </NavLink>
+            <NavLink
+              className={({ isActive }) => (
+                isActive
+                  ? `${styles.navLink ?? ''} ${styles.navLinkActive ?? ''}`
+                  : (styles.navLink ?? '')
+              )}
+              to={VEHICLES_PATH}
+            >
+              <CarFront aria-hidden="true" className={styles.icon} />
+              <span>Vehicles</span>
             </NavLink>
           </nav>
           <div className={styles.accountArea}>
