@@ -63,7 +63,7 @@ const vehicle: Vehicle = {
   ownerId: admin.id,
   make: 'Ferrari',
   model: 'Roma',
-  year: 2021,
+  year: '2021',
   registration: 'TEST 123',
   registrationState: 'WA',
   vin: 'PRIVATE-VIN',
@@ -85,7 +85,7 @@ const summary: VehicleSummary = vehicle;
 const validInput: CreateVehicle = {
   make: 'Ferrari',
   model: 'Roma',
-  year: 2021,
+  year: '2021',
   registration: 'TEST 123',
   registrationState: 'WA',
   odometerUnit: 'km',

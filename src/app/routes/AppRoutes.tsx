@@ -11,6 +11,7 @@ import {
   AUTH_CALLBACK_PATH,
   DASHBOARD_PATH,
   NEW_VEHICLE_PATH,
+  REGISTRATION_LOOKUP_PRIVACY_PATH,
   SIGN_IN_PATH,
   VEHICLE_DETAIL_PATH,
   VEHICLE_EDIT_PATH,
@@ -42,12 +43,29 @@ function ProtectedApplicationRoute() {
   );
 }
 
+function RegistrationLookupPrivacyRoute() {
+  return (
+    <main>
+      <h1>Registration lookup privacy notice</h1>
+      <p>When you choose to use registration lookup, your Registration and selected Australian state or territory are sent to PlateAPI to return a Vehicle suggestion.</p>
+      <p>Lookup is optional. You can create a Vehicle manually without sending this information to PlateAPI.</p>
+      <p>
+        <a href="https://plateapi.com.au/privacy/" rel="noreferrer" target="_blank">
+          Read the PlateAPI privacy policy
+        </a>
+        .
+      </p>
+    </main>
+  );
+}
+
 export function AppRoutes() {
   return (
     <Routes>
       <Route path={SIGN_IN_PATH} element={<SignInRoute />} />
       <Route path={AUTH_CALLBACK_PATH} element={<AuthenticationCallbackRoute />} />
       <Route path={ACCESS_UNAVAILABLE_PATH} element={<AccessUnavailableRoute />} />
+      <Route path={REGISTRATION_LOOKUP_PRIVACY_PATH} element={<RegistrationLookupPrivacyRoute />} />
       <Route element={<ProtectedRoute />}>
         <Route path={DASHBOARD_PATH} element={<DashboardRoute />} />
         <Route

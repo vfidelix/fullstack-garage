@@ -24,6 +24,7 @@ function validValues(
     currentOdometer: '',
     odometerUnit: 'km',
     engine: '',
+    body: '',
     notes: '',
     ...overrides,
   };
@@ -38,6 +39,7 @@ describe('vehicleFormSchema', () => {
       registrationState: '',
       vin: '   ',
       engine: '   ',
+      body: '   ',
       notes: '   ',
     }))).toEqual({
       make: 'Ferrari',
@@ -63,6 +65,16 @@ describe('vehicleFormSchema', () => {
     })).success).toBe(false);
   });
 
+  it('outputs trimmed Year and Body text', () => {
+    expect(vehicleFormSchema.parse(validValues({
+      year: ' 2026 ',
+      body: '  Coupe  ',
+    }))).toMatchObject({
+      year: '2026',
+      body: 'Coupe',
+    });
+  });
+
   it.each(['make', 'model'] as const)('requires trimmed %s', (field) => {
     const result = vehicleFormSchema.safeParse(validValues({ [field]: '   ' }));
     expect(result.success).toBe(false);
@@ -79,6 +91,7 @@ describe('vehicleFormSchema', () => {
     'registration',
     'vin',
     'engine',
+    'body',
   ] as const)('accepts 50 and rejects 51 characters for %s', (field) => {
     expect(vehicleFormSchema.safeParse(validValues({ [field]: 'x'.repeat(50) })).success)
       .toBe(true);
@@ -92,6 +105,7 @@ describe('vehicleFormSchema', () => {
     'registration',
     'vin',
     'engine',
+    'body',
   ] as const)('uses code-point limits for non-BMP %s values', (field) => {
     expect(vehicleFormSchema.safeParse(validValues({
       [field]: nonBmpCharacter.repeat(50),
@@ -117,13 +131,22 @@ describe('vehicleFormSchema', () => {
     })).success).toBe(false);
   });
 
-  it.each(['1900', '9999'] as const)('accepts boundary year %s', (year) => {
+  it.each(['1900', '2026', '9999'] as const)('accepts manual year %s', (year) => {
     expect(vehicleFormSchema.parse(validValues({ year }))).toMatchObject({
-      year: Number(year),
+      year,
     });
   });
 
-  it.each(['1899', '10000', '2021.5', '-2021', 'year'] as const)(
+  it.each([
+    '1899',
+    '999',
+    '10000',
+    '2021.5',
+    '-2021',
+    '+2021',
+    'year',
+    '2018-2021',
+  ] as const)(
     'rejects invalid year %s',
     (year) => {
       expect(vehicleFormSchema.safeParse(validValues({ year })).success).toBe(false);
@@ -164,13 +187,14 @@ describe('vehicleFormSchema', () => {
       ownerId: 'owner-1',
       make: 'Ferrari',
       model: 'Roma',
-      year: 2021,
+      year: '2021',
       registration: 'SYN 123',
       registrationState: 'WA',
       vin: 'SYNTHETIC-VIN',
       currentOdometer: 12000,
       odometerUnit: 'mi',
       engine: 'V8',
+      body: 'Coupe',
       notes: 'Private notes',
       archivedAt: '2026-07-20T00:00:00.000Z',
       createdAt: '2026-07-20T00:00:00.000Z',
@@ -187,9 +211,13 @@ describe('vehicleFormSchema', () => {
       currentOdometer: '12000',
       odometerUnit: 'mi',
       engine: 'V8',
+      body: 'Coupe',
       notes: 'Private notes',
     });
-    expect(createVehicleFormDefaults()).toMatchObject({ odometerUnit: 'km' });
+    expect(createVehicleFormDefaults()).toMatchObject({
+      odometerUnit: 'km',
+      body: '',
+    });
     expect(createVehicleFormDefaults()).not.toHaveProperty('ownerId');
     expect(createVehicleFormDefaults()).not.toHaveProperty('archivedAt');
     expect(createVehicleFormDefaults()).not.toHaveProperty('createdAt');

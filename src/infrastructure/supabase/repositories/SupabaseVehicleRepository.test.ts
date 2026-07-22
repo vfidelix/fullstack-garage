@@ -123,13 +123,14 @@ const activeRow = {
   owner_id: ownerId,
   make: 'Ferrari',
   model: 'Roma',
-  year: 2021,
+  year: '2018-2021',
   registration: 'TEST 123',
   registration_state: 'WA',
   vin: 'SYNTHETIC-VIN',
   current_odometer: 12_500,
   odometer_unit: 'km',
   engine: 'Synthetic V8',
+  body: 'Coupe',
   notes: 'Synthetic notes',
   archived_at: null,
   created_at: '2026-07-20T01:00:00.000Z',
@@ -202,6 +203,14 @@ describe('SupabaseVehicleRepository', () => {
       method: 'not',
       arguments: ['archived_at', 'is', null],
     });
+    expect(client.calls.filter((call) => call.method === 'select')).toEqual([
+      expect.objectContaining({
+        arguments: [expect.not.stringContaining('body')],
+      }),
+      expect.objectContaining({
+        arguments: [expect.not.stringContaining('body')],
+      }),
+    ]);
   });
 
   it('gets, creates, and updates Vehicles without forwarding an owner ID', async () => {
@@ -213,8 +222,10 @@ describe('SupabaseVehicleRepository', () => {
     const input = {
       make: ' Ferrari ',
       model: ' Roma ',
+      year: ' 2018-2021 ',
       registration: ' TEST 123 ',
       registrationState: ' wa ',
+      body: ' Coupe ',
       odometerUnit: 'km' as const,
     };
 
@@ -240,10 +251,17 @@ describe('SupabaseVehicleRepository', () => {
       model: 'Roma',
       registration: 'TEST 123',
       registration_state: 'WA',
+      year: '2018-2021',
+      body: 'Coupe',
       odometer_unit: 'km',
     }));
     expect(writes[0]?.arguments[0]).not.toHaveProperty('owner_id');
     expect(writes[1]?.arguments[0]).not.toHaveProperty('owner_id');
+    expect(client.calls.filter((call) => call.method === 'select')).toEqual([
+      expect.objectContaining({ arguments: [expect.stringContaining('body')] }),
+      expect.objectContaining({ arguments: [expect.stringContaining('body')] }),
+      expect.objectContaining({ arguments: [expect.stringContaining('body')] }),
+    ]);
   });
 
   it('maps create and update responses at the accepted odometer maximum', async () => {
@@ -281,6 +299,7 @@ describe('SupabaseVehicleRepository', () => {
       registration_state: 'TAS',
       vin: nonBmpCharacter.repeat(50),
       engine: nonBmpCharacter.repeat(50),
+      body: nonBmpCharacter.repeat(50),
       notes: nonBmpCharacter.repeat(500),
     };
     const archivedBoundaryRow = {
@@ -301,6 +320,7 @@ describe('SupabaseVehicleRepository', () => {
       vin: boundaryRow.vin,
       odometerUnit: 'km' as const,
       engine: boundaryRow.engine,
+      body: boundaryRow.body,
       notes: boundaryRow.notes,
     };
 
@@ -438,7 +458,7 @@ describe('SupabaseVehicleRepository', () => {
       ok: true,
       value: {
         vehicleId,
-        label: '2021 Ferrari Roma · TEST 123 WA',
+        label: '2018-2021 Ferrari Roma · TEST 123 WA',
       },
     });
     await expect(
@@ -447,7 +467,7 @@ describe('SupabaseVehicleRepository', () => {
       ok: true,
       value: {
         vehicleId: secondVehicleId,
-        label: '2021 Ferrari Roma · TEST 123 WA',
+        label: '2018-2021 Ferrari Roma · TEST 123 WA',
       },
     });
   });

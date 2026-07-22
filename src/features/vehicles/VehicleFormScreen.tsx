@@ -9,6 +9,7 @@ import {
   createVehicleDetailPath,
   VEHICLES_PATH,
 } from '../../app/routes/routePaths';
+import { getVehicleRegistrationLookup } from '../../app/vehicleComposition';
 import type { CreateVehicle, VehicleId } from '../../domain/vehicles/vehicle';
 import { VehicleForm } from './VehicleForm';
 import { getSafeVehicleErrorMessage } from './vehicleErrorMessages';
@@ -69,7 +70,11 @@ function CreateVehicleFormScreen() {
           </Link>
         </div>
       </header>
-      <VehicleForm onSubmit={saveVehicle} submitLabel="Add Vehicle" />
+      <VehicleForm
+        lookupRegistration={(input) => getVehicleRegistrationLookup().execute(input)}
+        onSubmit={saveVehicle}
+        submitLabel="Add Vehicle"
+      />
     </main>
   );
 }

@@ -25,3 +25,9 @@ export function assertOnlyApprovedPublicEnvironment(
     validateSupabaseBrowserConfig(environment);
   }
 }
+
+export function removeLocalDevelopmentSecretsFromBuildOutput(
+  buildOutput: Record<string, unknown>,
+): void {
+  delete buildOutput['.dev.vars'];
+}

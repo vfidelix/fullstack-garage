@@ -45,7 +45,7 @@ const vehicle: Vehicle = {
   ownerId: 'app-user-1',
   make: 'Ferrari',
   model: 'Roma',
-  year: 2021,
+  year: '2021',
   registration: 'TEST 123',
   registrationState: 'WA',
   currentOdometer: 12_500,

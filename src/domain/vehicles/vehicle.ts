@@ -28,13 +28,14 @@ export interface Vehicle {
   readonly ownerId: AppUserId;
   readonly make: string;
   readonly model: string;
-  readonly year?: number;
+  readonly year?: string;
   readonly registration?: string;
   readonly registrationState?: AustralianRegistrationState;
   readonly vin?: string;
   readonly currentOdometer?: number;
   readonly odometerUnit: OdometerUnit;
   readonly engine?: string;
+  readonly body?: string;
   readonly notes?: string;
   readonly archivedAt?: string;
   readonly createdAt: string;
@@ -57,13 +58,14 @@ export type VehicleSummary = Readonly<Pick<
 export interface CreateVehicle {
   readonly make: string;
   readonly model: string;
-  readonly year?: number;
+  readonly year?: string;
   readonly registration?: string;
   readonly registrationState?: string;
   readonly vin?: string;
   readonly currentOdometer?: number;
   readonly odometerUnit: OdometerUnit;
   readonly engine?: string;
+  readonly body?: string;
   readonly notes?: string;
 }
 
@@ -128,16 +130,18 @@ export function countVehicleTextCharacters(value: string): number {
 }
 
 export function normalizeVehicleInput(input: CreateVehicle): CreateVehicle {
+  const year = normalizeOptionalText(input.year);
   const registration = normalizeOptionalText(input.registration);
   const registrationState = normalizeRegistrationState(input.registrationState);
   const vin = normalizeOptionalText(input.vin);
   const engine = normalizeOptionalText(input.engine);
+  const body = normalizeOptionalText(input.body);
   const notes = normalizeOptionalText(input.notes);
 
   return {
     make: input.make.trim(),
     model: input.model.trim(),
-    ...(input.year === undefined ? {} : { year: input.year }),
+    ...(year === undefined ? {} : { year }),
     ...(registration === undefined ? {} : { registration }),
     ...(registrationState === undefined ? {} : { registrationState }),
     ...(vin === undefined ? {} : { vin }),
@@ -146,6 +150,7 @@ export function normalizeVehicleInput(input: CreateVehicle): CreateVehicle {
       : { currentOdometer: input.currentOdometer }),
     odometerUnit: input.odometerUnit,
     ...(engine === undefined ? {} : { engine }),
+    ...(body === undefined ? {} : { body }),
     ...(notes === undefined ? {} : { notes }),
   };
 }
@@ -170,14 +175,7 @@ function validateVehicleInput(input: CreateVehicle): VehicleValidationResult<Cre
     issues.push({ field: 'model', code: 'too_long' });
   }
 
-  if (
-    normalized.year !== undefined
-    && (!Number.isInteger(normalized.year)
-      || normalized.year < VEHICLE_YEAR_MIN
-      || normalized.year > VEHICLE_YEAR_MAX)
-  ) {
-    issues.push({ field: 'year', code: 'invalid_year' });
-  }
+  validateOptionalTextLength(normalized.year, 'year', issues);
 
   validateOptionalTextLength(normalized.registration, 'registration', issues);
   if (
@@ -205,6 +203,7 @@ function validateVehicleInput(input: CreateVehicle): VehicleValidationResult<Cre
   }
 
   validateOptionalTextLength(normalized.engine, 'engine', issues);
+  validateOptionalTextLength(normalized.body, 'body', issues);
 
   if (
     normalized.notes !== undefined
@@ -220,7 +219,7 @@ function validateVehicleInput(input: CreateVehicle): VehicleValidationResult<Cre
 
 function validateOptionalTextLength(
   value: string | undefined,
-  field: 'registration' | 'vin' | 'engine',
+  field: 'year' | 'registration' | 'vin' | 'engine' | 'body',
   issues: VehicleValidationIssue[],
 ): void {
   if (
@@ -257,7 +256,7 @@ export function formatVehicleLabel(vehicle: VehicleLabelSource): string {
   const makeAndModel = `${vehicle.make.trim()} ${vehicle.model.trim()}`;
   const withYear = vehicle.year === undefined
     ? makeAndModel
-    : `${String(vehicle.year)} ${makeAndModel}`;
+    : `${vehicle.year} ${makeAndModel}`;
   const registration = normalizeOptionalText(vehicle.registration);
   const registrationState = normalizeRegistrationState(vehicle.registrationState);
 

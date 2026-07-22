@@ -43,6 +43,11 @@ function isNullableInteger(value: unknown): value is number | null {
   return value === null || Number.isSafeInteger(value);
 }
 
+function isNullableYear(value: unknown): value is string | null {
+  return value === null
+    || (typeof value === 'string' && value.trim() !== '');
+}
+
 function isNullableTimestamp(value: unknown): value is string | null {
   return value === null || isTimestamp(value);
 }
@@ -51,7 +56,7 @@ function hasSummaryShape(value: UnknownRecord): boolean {
   return isIdentifier(value.id)
     && isRequiredText(value.make)
     && isRequiredText(value.model)
-    && isNullableInteger(value.year)
+    && isNullableYear(value.year)
     && isNullableText(value.registration)
     && isNullableRegistrationState(value.registration_state)
     && isNullableInteger(value.current_odometer)
@@ -64,7 +69,7 @@ export function mapVehicleSummaryRow(value: unknown): VehicleSummary | null {
     return null;
   }
 
-  const year = value.year as number | null;
+  const year = value.year as string | null;
   const registration = value.registration as string | null;
   const registrationState = value.registration_state as string | null;
   const currentOdometer = value.current_odometer as number | null;
@@ -114,6 +119,7 @@ export function mapVehicleRow(value: unknown): Vehicle | null {
     || !isIdentifier(value.owner_id)
     || !isNullableText(value.vin)
     || !isNullableText(value.engine)
+    || !isNullableText(value.body)
     || !isNullableText(value.notes)
     || !isTimestamp(value.created_at)
     || !isTimestamp(value.updated_at)
@@ -129,6 +135,7 @@ export function mapVehicleRow(value: unknown): Vehicle | null {
 
   const vin = value.vin;
   const engine = value.engine;
+  const body = value.body;
   const notes = value.notes;
   const validation = validateCreateVehicle({
     make: summary.make,
@@ -146,6 +153,7 @@ export function mapVehicleRow(value: unknown): Vehicle | null {
       : { currentOdometer: summary.currentOdometer }),
     odometerUnit: summary.odometerUnit,
     ...(engine === null ? {} : { engine }),
+    ...(body === null ? {} : { body }),
     ...(notes === null ? {} : { notes }),
   });
 
@@ -160,6 +168,9 @@ export function mapVehicleRow(value: unknown): Vehicle | null {
     ...(validation.value.engine === undefined
       ? {}
       : { engine: validation.value.engine }),
+    ...(validation.value.body === undefined
+      ? {}
+      : { body: validation.value.body }),
     ...(validation.value.notes === undefined
       ? {}
       : { notes: validation.value.notes }),

@@ -88,6 +88,10 @@ function VehicleDetails({ vehicle }: { readonly vehicle: Vehicle }) {
         <dt>Engine</dt>
         <dd>{displayValue(vehicle.engine)}</dd>
       </div>
+      <div className={styles.detail}>
+        <dt>Body</dt>
+        <dd>{displayValue(vehicle.body)}</dd>
+      </div>
       <div className={`${styles.detail ?? ''} ${styles.detailFull ?? ''}`}>
         <dt>Notes</dt>
         <dd>{displayValue(vehicle.notes)}</dd>

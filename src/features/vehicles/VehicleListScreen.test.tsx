@@ -24,7 +24,7 @@ const activeVehicles: readonly VehicleSummary[] = [
     id: 'vehicle-full-label',
     make: 'Ferrari',
     model: 'Roma',
-    year: 2021,
+    year: '2021',
     registration: 'SYN 123',
     registrationState: 'WA',
     currentOdometer: 123456,
@@ -34,7 +34,7 @@ const activeVehicles: readonly VehicleSummary[] = [
     id: 'vehicle-no-registration',
     make: 'Ferrari',
     model: '296 GTB',
-    year: 2022,
+    year: '2022',
     odometerUnit: 'mi',
   },
   {
@@ -57,7 +57,7 @@ const archivedVehicle: VehicleSummary = {
   id: 'vehicle-archived',
   make: 'Ferrari',
   model: 'Testarossa',
-  year: 1988,
+  year: '1988',
   currentOdometer: 42000,
   odometerUnit: 'mi',
   archivedAt: '2026-07-20T00:00:00.000Z',
@@ -67,7 +67,7 @@ const vehicle: Vehicle = {
   id: 'vehicle-full-label',
   make: 'Ferrari',
   model: 'Roma',
-  year: 2021,
+  year: '2021',
   registration: 'SYN 123',
   registrationState: 'WA',
   currentOdometer: 123456,
@@ -201,6 +201,40 @@ describe('VehicleListScreen', () => {
     expect(operations.listArchivedVehicles).toHaveBeenCalledOnce();
     expect(operations.listActiveVehicles).not.toHaveBeenCalled();
   });
+
+  it.each([
+    ['active', undefined, '2021 Ferrari Roma · SYN 123 WA', 'Coupe'],
+    [
+      'archived',
+      '2026-07-20T00:00:00.000Z',
+      '2021 Ferrari Roma · SYN 123 WA',
+      'Berlinetta',
+    ],
+  ] as const)(
+    'omits Body from %s compact labels and rows',
+    async (lifecycle, archivedAt, label, body) => {
+      const vehicleWithBody: Vehicle = {
+        ...vehicle,
+        body,
+        ...(archivedAt === undefined ? {} : { archivedAt }),
+      };
+      const operations = createOperations({
+        listActiveVehicles: vi.fn().mockResolvedValue({
+          ok: true,
+          value: [vehicleWithBody],
+        }),
+        listArchivedVehicles: vi.fn().mockResolvedValue({
+          ok: true,
+          value: [vehicleWithBody],
+        }),
+      });
+      renderScreen(lifecycle, operations);
+
+      expect(await screen.findByRole('article', { name: label })).toBeVisible();
+      expect(screen.getByRole('link', { name: label })).toBeVisible();
+      expect(screen.queryByText(body)).not.toBeInTheDocument();
+    },
+  );
 
   it('announces loading without rendering stale rows', () => {
     const operations = createOperations({

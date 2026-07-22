@@ -35,6 +35,7 @@ const VEHICLE_COLUMNS = [
   'current_odometer',
   'odometer_unit',
   'engine',
+  'body',
   'notes',
   'archived_at',
   'created_at',
@@ -110,6 +111,7 @@ function toVehicleWriteRow(input: CreateVehicle): VehicleWriteRow {
     current_odometer: input.currentOdometer ?? null,
     odometer_unit: input.odometerUnit,
     engine: input.engine ?? null,
+    body: input.body ?? null,
     notes: input.notes ?? null,
   };
 }

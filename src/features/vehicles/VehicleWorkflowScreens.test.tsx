@@ -29,13 +29,14 @@ const vehicle: Vehicle = {
   ownerId: 'owner-private',
   make: 'Ferrari',
   model: 'Roma',
-  year: 2021,
+  year: '2021',
   registration: 'SYN 123',
   registrationState: 'WA',
   vin: 'SYNTHETIC-VIN',
   currentOdometer: 12000,
   odometerUnit: 'km',
   engine: 'V8',
+  body: 'Coupe',
   notes: 'Private notes',
   archivedAt: '2026-07-20T00:00:00.000Z',
   createdAt: '2026-07-20T00:00:00.000Z',
@@ -47,7 +48,7 @@ const activeVehicle: Vehicle = {
   ownerId: 'owner-private',
   make: 'Ferrari',
   model: 'Roma',
-  year: 2021,
+  year: '2021',
   registration: 'SYN 123',
   registrationState: 'WA',
   vin: 'SYNTHETIC-VIN',
@@ -227,6 +228,11 @@ describe('Vehicle create workflow', () => {
     expect(screen.getByRole('radio', { name: 'Kilometres' })).toBeChecked();
     expect(screen.getByRole('radio', { name: 'Miles' })).not.toBeChecked();
     expect(screen.getByLabelText('Registration state')).toHaveValue('');
+    expect(screen.getByLabelText('Body')).toHaveValue('');
+    expect(screen.getByLabelText('Body')).toHaveAccessibleDescription(
+      '0 / 50 characters',
+    );
+    expect(screen.getByLabelText('Body')).not.toHaveAttribute('readonly');
     expect(screen.queryByLabelText(/owner|archived|created|updated/iu))
       .not.toBeInTheDocument();
     const vehicleLinks = screen.getAllByRole('link', { name: 'Vehicles' });
@@ -290,6 +296,7 @@ describe('Vehicle create workflow', () => {
     await user.type(screen.getByLabelText('Current odometer'), '0');
     await user.click(screen.getByRole('radio', { name: 'Miles' }));
     await user.type(screen.getByLabelText('Engine'), '  V8  ');
+    await user.type(screen.getByLabelText('Body'), '  Coupe  ');
     await user.type(screen.getByLabelText('Notes'), '  Private notes  ');
     await user.click(screen.getByRole('button', { name: 'Add Vehicle' }));
 
@@ -297,13 +304,14 @@ describe('Vehicle create workflow', () => {
       expect(operations.createVehicle).toHaveBeenCalledWith({
         make: 'Ferrari',
         model: 'Roma',
-        year: 2021,
+        year: '2021',
         registration: 'SYN 123',
         registrationState: 'WA',
         vin: 'SYNTHETIC-VIN',
         currentOdometer: 0,
         odometerUnit: 'mi',
         engine: 'V8',
+        body: 'Coupe',
         notes: 'Private notes',
       });
     });
@@ -396,13 +404,13 @@ describe('Vehicle create workflow', () => {
     expect(createVehicle).toHaveBeenCalledTimes(2);
   });
 
-  it('maps authoritative server validation to an accessible field error', async () => {
+  it('maps authoritative Body validation to its count and accessible field error', async () => {
     const user = userEvent.setup();
     const operations = createOperations({
       createVehicle: vi.fn().mockResolvedValue({
         ok: false,
         error: createVehicleValidationError([{
-          field: 'vin',
+          field: 'body',
           code: 'too_long',
         }]),
       }),
@@ -414,8 +422,15 @@ describe('Vehicle create workflow', () => {
     await user.click(screen.getByRole('button', { name: 'Add Vehicle' }));
 
     expect(await screen.findByText('This value is too long.')).toBeVisible();
-    expect(screen.getByLabelText('VIN')).toHaveFocus();
-    expect(screen.getByLabelText('VIN')).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByLabelText('Body')).toHaveFocus();
+    expect(screen.getByLabelText('Body')).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByLabelText('Body')).toHaveAttribute(
+      'aria-describedby',
+      'vehicle-body-count vehicle-body-error',
+    );
+    expect(screen.getByLabelText('Body')).toHaveAccessibleDescription(
+      '0 / 50 characters This value is too long.',
+    );
   });
 
   it('shows form-level feedback when server validation has no field issues', async () => {
@@ -475,6 +490,13 @@ describe('Vehicle detail and edit workflows', () => {
     expect(screen.getByText('SYNTHETIC-VIN')).toBeVisible();
     expect(screen.getByText('12,000 km')).toBeVisible();
     expect(screen.getByText('V8')).toBeVisible();
+    const bodyDetail = screen.getByText('Body', { selector: 'dt' }).parentElement;
+    expect(bodyDetail).not.toBeNull();
+    if (bodyDetail === null) {
+      throw new Error('Body detail definition was not rendered.');
+    }
+    expect(within(bodyDetail).getByText('Coupe', { selector: 'dd' }))
+      .toBeVisible();
     expect(screen.getByText('Private notes')).toBeVisible();
     expect(screen.queryByText('owner-private')).not.toBeInTheDocument();
     expect(screen.queryByText('2026-07-20T00:00:00.000Z')).not.toBeInTheDocument();
@@ -484,6 +506,26 @@ describe('Vehicle detail and edit workflows', () => {
     );
   });
 
+  it('shows Body as not recorded when the Vehicle has no saved Body', async () => {
+    const operations = createOperations({
+      getVehicle: vi.fn().mockResolvedValue({ ok: true, value: activeVehicle }),
+    });
+    renderWorkflow('/vehicles/vehicle-1', operations);
+
+    expect(await screen.findByRole('heading', {
+      level: 1,
+      name: '2021 Ferrari Roma · SYN 123 WA',
+    })).toBeVisible();
+    const bodyDetail = screen.getByText('Body', { selector: 'dt' }).parentElement;
+    expect(bodyDetail).not.toBeNull();
+    if (bodyDetail === null) {
+      throw new Error('Body detail definition was not rendered.');
+    }
+    expect(within(bodyDetail).getByText('Not recorded', {
+      selector: 'dd',
+    })).toBeVisible();
+  });
+
   it('loads edit values, allows unit changes, and clears optional fields', async () => {
     const user = userEvent.setup();
     const updatedVehicle: Vehicle = {
@@ -491,7 +533,7 @@ describe('Vehicle detail and edit workflows', () => {
       ownerId: vehicle.ownerId,
       make: vehicle.make,
       model: vehicle.model,
-      year: 2021,
+      year: '2021',
       vin: 'SYNTHETIC-VIN',
       currentOdometer: 12000,
       odometerUnit: 'mi',
@@ -509,6 +551,11 @@ describe('Vehicle detail and edit workflows', () => {
     renderWorkflow('/vehicles/vehicle-1/edit', operations);
 
     expect(await screen.findByDisplayValue('SYN 123')).toBeVisible();
+    expect(screen.getByLabelText('Body')).toHaveValue('Coupe');
+    expect(screen.getByLabelText('Body')).not.toHaveAttribute('readonly');
+    expect(screen.getByLabelText('Body')).toHaveAccessibleDescription(
+      '5 / 50 characters',
+    );
     await user.clear(screen.getByLabelText('Registration'));
     await user.clear(screen.getByLabelText('Notes'));
     await user.click(screen.getByRole('radio', { name: 'Miles' }));
@@ -518,18 +565,87 @@ describe('Vehicle detail and edit workflows', () => {
       expect(operations.updateVehicle).toHaveBeenCalledWith('vehicle-1', {
         make: 'Ferrari',
         model: 'Roma',
-        year: 2021,
+        year: '2021',
         registrationState: 'WA',
         vin: 'SYNTHETIC-VIN',
         currentOdometer: 12000,
         odometerUnit: 'mi',
         engine: 'V8',
+        body: 'Coupe',
       });
     });
     expect(await screen.findByRole('heading', {
       level: 1,
       name: '2021 Ferrari Roma',
     })).toBeVisible();
+  });
+
+  it('preserves an untouched persisted Year range while saving unrelated edits', async () => {
+    const user = userEvent.setup();
+    const rangeVehicle: Vehicle = {
+      ...vehicle,
+      year: '2018-2021',
+    };
+    const operations = createOperations({
+      getVehicle: vi.fn().mockResolvedValue({ ok: true, value: rangeVehicle }),
+      updateVehicle: vi.fn().mockResolvedValue({
+        ok: true,
+        value: {
+          vehicle: {
+            ...rangeVehicle,
+            body: 'Convertible',
+            notes: 'Updated notes',
+          },
+        },
+      }),
+    });
+    renderWorkflow('/vehicles/vehicle-1/edit', operations);
+
+    expect(await screen.findByLabelText('Year')).toHaveValue('2018-2021');
+    await user.clear(screen.getByLabelText('Body'));
+    await user.type(screen.getByLabelText('Body'), 'Convertible');
+    await user.clear(screen.getByLabelText('Notes'));
+    await user.type(screen.getByLabelText('Notes'), 'Updated notes');
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+
+    await waitFor(() => {
+      expect(operations.updateVehicle).toHaveBeenCalledWith('vehicle-1', {
+        make: 'Ferrari',
+        model: 'Roma',
+        year: '2018-2021',
+        registration: 'SYN 123',
+        registrationState: 'WA',
+        vin: 'SYNTHETIC-VIN',
+        currentOdometer: 12000,
+        odometerUnit: 'km',
+        engine: 'V8',
+        body: 'Convertible',
+        notes: 'Updated notes',
+      });
+    });
+  });
+
+  it('keeps manual Year validation after an edit restores the persisted range', async () => {
+    const user = userEvent.setup();
+    const rangeVehicle: Vehicle = {
+      ...vehicle,
+      year: '2018-2021',
+    };
+    const operations = createOperations({
+      getVehicle: vi.fn().mockResolvedValue({ ok: true, value: rangeVehicle }),
+    });
+    renderWorkflow('/vehicles/vehicle-1/edit', operations);
+
+    const year = await screen.findByLabelText('Year');
+    await user.type(year, 'x');
+    await user.clear(year);
+    await user.type(year, '2018-2021');
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+
+    expect(operations.updateVehicle).not.toHaveBeenCalled();
+    expect(await screen.findByText(
+      'Year must be exactly four digits from 1900 to 9999.',
+    )).toBeVisible();
   });
 
   it('announces detail loading', () => {

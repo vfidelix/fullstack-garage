@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { assertOnlyApprovedPublicEnvironment } from './viteEnvironmentGuard';
+import {
+  assertOnlyApprovedPublicEnvironment,
+  removeLocalDevelopmentSecretsFromBuildOutput,
+} from './viteEnvironmentGuard';
 
 function createLegacyKey(role: 'anon' | 'service_role'): string {
   const encode = (value: object) => globalThis.btoa(JSON.stringify(value))
@@ -89,5 +92,22 @@ describe('assertOnlyApprovedPublicEnvironment', () => {
     }
 
     throw new Error('Expected the public environment guard to reject a secret.');
+  });
+});
+
+describe('removeLocalDevelopmentSecretsFromBuildOutput', () => {
+  it('removes local Worker secrets without changing deployable build artifacts', () => {
+    const buildOutput: Record<string, unknown> = {
+      '.dev.vars': 'PLATEAPI_API_KEY=private-value',
+      'index.js': 'worker bundle',
+      'wrangler.json': '{}',
+    };
+
+    removeLocalDevelopmentSecretsFromBuildOutput(buildOutput);
+
+    expect(buildOutput).toEqual({
+      'index.js': 'worker bundle',
+      'wrangler.json': '{}',
+    });
   });
 });
