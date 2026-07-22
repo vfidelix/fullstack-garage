@@ -6,22 +6,36 @@ export const VEHICLE_TEXT_MAX_LENGTH = 50;
 export const VEHICLE_NOTES_MAX_LENGTH = 500;
 export const VEHICLE_ODOMETER_MAX = Number.MAX_SAFE_INTEGER;
 export const ODOMETER_UNITS = ['km', 'mi'] as const;
+export const AUSTRALIAN_REGISTRATION_STATES = [
+  'ACT',
+  'NSW',
+  'NT',
+  'QLD',
+  'SA',
+  'TAS',
+  'VIC',
+  'WA',
+] as const;
 
 export type VehicleId = string;
 
 export type OdometerUnit = typeof ODOMETER_UNITS[number];
+export type AustralianRegistrationState
+  = typeof AUSTRALIAN_REGISTRATION_STATES[number];
 
 export interface Vehicle {
   readonly id: VehicleId;
   readonly ownerId: AppUserId;
   readonly make: string;
   readonly model: string;
-  readonly year?: number;
+  readonly year?: string;
   readonly registration?: string;
+  readonly registrationState?: AustralianRegistrationState;
   readonly vin?: string;
   readonly currentOdometer?: number;
   readonly odometerUnit: OdometerUnit;
   readonly engine?: string;
+  readonly body?: string;
   readonly notes?: string;
   readonly archivedAt?: string;
   readonly createdAt: string;
@@ -35,6 +49,7 @@ export type VehicleSummary = Readonly<Pick<
   | 'model'
   | 'year'
   | 'registration'
+  | 'registrationState'
   | 'currentOdometer'
   | 'odometerUnit'
   | 'archivedAt'
@@ -43,12 +58,14 @@ export type VehicleSummary = Readonly<Pick<
 export interface CreateVehicle {
   readonly make: string;
   readonly model: string;
-  readonly year?: number;
+  readonly year?: string;
   readonly registration?: string;
+  readonly registrationState?: string;
   readonly vin?: string;
   readonly currentOdometer?: number;
   readonly odometerUnit: OdometerUnit;
   readonly engine?: string;
+  readonly body?: string;
   readonly notes?: string;
 }
 
@@ -62,6 +79,7 @@ export type VehicleValidationIssueCode
   = | 'required'
     | 'too_long'
     | 'invalid_year'
+    | 'invalid_registration_state'
     | 'invalid_odometer'
     | 'invalid_odometer_unit';
 
@@ -75,12 +93,12 @@ export type VehicleValidationResult<T>
     | { readonly valid: false; readonly issues: readonly VehicleValidationIssue[] };
 
 export type VehicleLabelSource = Pick<CreateVehicle, 'make' | 'model'> & Partial<
-  Pick<CreateVehicle, 'year' | 'registration'>
+  Pick<CreateVehicle, 'year' | 'registration' | 'registrationState'>
 >;
 
 export type VehicleDuplicateCandidate = Pick<
   CreateVehicle,
-  'make' | 'model' | 'registration'
+  'make' | 'model' | 'registration' | 'registrationState'
 >;
 
 type VehicleDuplicateSource = VehicleDuplicateCandidate & {
@@ -96,27 +114,43 @@ function normalizeOptionalText(value: string | undefined): string | undefined {
   return countVehicleTextCharacters(normalized) === 0 ? undefined : normalized;
 }
 
+function normalizeRegistrationState(
+  value: string | undefined,
+): string | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  const normalized = value.trim().toUpperCase();
+  return normalized === '' ? undefined : normalized;
+}
+
 export function countVehicleTextCharacters(value: string): number {
   return Array.from(value).length;
 }
 
 export function normalizeVehicleInput(input: CreateVehicle): CreateVehicle {
+  const year = normalizeOptionalText(input.year);
   const registration = normalizeOptionalText(input.registration);
+  const registrationState = normalizeRegistrationState(input.registrationState);
   const vin = normalizeOptionalText(input.vin);
   const engine = normalizeOptionalText(input.engine);
+  const body = normalizeOptionalText(input.body);
   const notes = normalizeOptionalText(input.notes);
 
   return {
     make: input.make.trim(),
     model: input.model.trim(),
-    ...(input.year === undefined ? {} : { year: input.year }),
+    ...(year === undefined ? {} : { year }),
     ...(registration === undefined ? {} : { registration }),
+    ...(registrationState === undefined ? {} : { registrationState }),
     ...(vin === undefined ? {} : { vin }),
     ...(input.currentOdometer === undefined
       ? {}
       : { currentOdometer: input.currentOdometer }),
     odometerUnit: input.odometerUnit,
     ...(engine === undefined ? {} : { engine }),
+    ...(body === undefined ? {} : { body }),
     ...(notes === undefined ? {} : { notes }),
   };
 }
@@ -141,16 +175,18 @@ function validateVehicleInput(input: CreateVehicle): VehicleValidationResult<Cre
     issues.push({ field: 'model', code: 'too_long' });
   }
 
-  if (
-    normalized.year !== undefined
-    && (!Number.isInteger(normalized.year)
-      || normalized.year < VEHICLE_YEAR_MIN
-      || normalized.year > VEHICLE_YEAR_MAX)
-  ) {
-    issues.push({ field: 'year', code: 'invalid_year' });
-  }
+  validateOptionalTextLength(normalized.year, 'year', issues);
 
   validateOptionalTextLength(normalized.registration, 'registration', issues);
+  if (
+    normalized.registrationState !== undefined
+    && !isAustralianRegistrationState(normalized.registrationState)
+  ) {
+    issues.push({
+      field: 'registrationState',
+      code: 'invalid_registration_state',
+    });
+  }
   validateOptionalTextLength(normalized.vin, 'vin', issues);
 
   if (
@@ -167,6 +203,7 @@ function validateVehicleInput(input: CreateVehicle): VehicleValidationResult<Cre
   }
 
   validateOptionalTextLength(normalized.engine, 'engine', issues);
+  validateOptionalTextLength(normalized.body, 'body', issues);
 
   if (
     normalized.notes !== undefined
@@ -182,7 +219,7 @@ function validateVehicleInput(input: CreateVehicle): VehicleValidationResult<Cre
 
 function validateOptionalTextLength(
   value: string | undefined,
-  field: 'registration' | 'vin' | 'engine',
+  field: 'year' | 'registration' | 'vin' | 'engine' | 'body',
   issues: VehicleValidationIssue[],
 ): void {
   if (
@@ -209,16 +246,25 @@ export function isOdometerUnit(value: unknown): value is OdometerUnit {
   return value === 'km' || value === 'mi';
 }
 
+export function isAustralianRegistrationState(
+  value: unknown,
+): value is AustralianRegistrationState {
+  return AUSTRALIAN_REGISTRATION_STATES.some((state) => state === value);
+}
+
 export function formatVehicleLabel(vehicle: VehicleLabelSource): string {
   const makeAndModel = `${vehicle.make.trim()} ${vehicle.model.trim()}`;
   const withYear = vehicle.year === undefined
     ? makeAndModel
-    : `${String(vehicle.year)} ${makeAndModel}`;
+    : `${vehicle.year} ${makeAndModel}`;
   const registration = normalizeOptionalText(vehicle.registration);
+  const registrationState = normalizeRegistrationState(vehicle.registrationState);
 
   return registration === undefined
     ? withYear
-    : `${withYear} · ${registration}`;
+    : `${withYear} · ${registration}${
+      registrationState === undefined ? '' : ` ${registrationState}`
+    }`;
 }
 
 export function getVehicleLifecycleState(
@@ -241,8 +287,11 @@ function hasMatchingDuplicateKey(
     === normalizeDuplicateValue(candidate.model);
   const registrationMatches = normalizeDuplicateValue(vehicle.registration)
     === normalizeDuplicateValue(candidate.registration);
+  const registrationStateMatches = normalizeDuplicateValue(vehicle.registrationState)
+    === normalizeDuplicateValue(candidate.registrationState);
 
-  return makeMatches && modelMatches && registrationMatches;
+  return makeMatches && modelMatches && registrationMatches
+    && registrationStateMatches;
 }
 
 export function findDuplicateVehicle<T extends VehicleDuplicateSource>(

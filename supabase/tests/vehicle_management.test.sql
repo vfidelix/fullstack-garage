@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select extensions.plan(75);
+select extensions.plan(99);
 
 create function pg_temp.sqlstate_for(p_statement text)
 returns text
@@ -49,10 +49,12 @@ insert into public.vehicles (
   model,
   year,
   registration,
+  registration_state,
   vin,
   current_odometer,
   odometer_unit,
   engine,
+  body,
   notes,
   archived_at
 )
@@ -62,12 +64,14 @@ values
     '21000000-0000-4000-8000-000000000001',
     'Synthetic Make',
     'Active Model',
-    2024,
+    '2024',
     'SYN ACTIVE',
+    'WA',
     'SYNTHETIC-VIN-ACTIVE',
     12000,
     'km',
     'Synthetic Engine',
+    'Coupe',
     'Synthetic active fixture',
     null
   ),
@@ -76,11 +80,13 @@ values
     '21000000-0000-4000-8000-000000000001',
     'Synthetic Make',
     'Archived Model',
-    2023,
+    null,
     'SYN ARCHIVE',
+    null,
     null,
     8000,
     'mi',
+    null,
     null,
     null,
     statement_timestamp()
@@ -112,60 +118,129 @@ select extensions.is(
   'Active Model'::text,
   'mapped admin can get one Vehicle'
 );
-
-insert into public.vehicles (id, make, model)
-values (
-  '23000000-0000-4000-8000-000000000003',
-  'Created Make',
-  'Created Model'
-);
-
 select extensions.is(
   (
-    select owner_id
+    select year
     from public.vehicles
-    where id = '23000000-0000-4000-8000-000000000003'
+    where id = '23000000-0000-4000-8000-000000000001'
   ),
-  '21000000-0000-4000-8000-000000000001'::uuid,
-  'mapped admin can create a Vehicle and ownership comes from the caller'
+  '2024'::text,
+  'mapped admin reads the preserved text Year value'
+);
+select extensions.is(
+  (
+    select body
+    from public.vehicles
+    where id = '23000000-0000-4000-8000-000000000001'
+  ),
+  'Coupe'::text,
+  'mapped admin can read persisted Body'
+);
+select extensions.is(
+  (
+    select registration_state
+    from public.vehicles
+    where id = '23000000-0000-4000-8000-000000000001'
+  ),
+  'WA'::text,
+  'mapped admin can read persisted registration state'
+);
+select extensions.is(
+  (
+    select registration_state
+    from public.vehicles
+    where id = '23000000-0000-4000-8000-000000000002'
+  ),
+  null::text,
+  'existing compatible Vehicles may omit registration state'
+);
+select extensions.ok(
+  (
+    select year is null and body is null
+    from public.vehicles
+    where id = '23000000-0000-4000-8000-000000000002'
+  ),
+  'existing compatible Vehicles may omit Year and Body'
+);
+
+insert into public.vehicles (make, model, year, registration_state, body)
+values (
+  'Created Make',
+  'Created Model',
+  '2018-2021',
+  'NSW',
+  'SUV'
+);
+
+select extensions.ok(
+  (
+    select owner_id
+      = '21000000-0000-4000-8000-000000000001'::uuid
+      and year = '2018-2021'
+      and registration_state = 'NSW'
+      and body = 'SUV'
+    from public.vehicles
+    where make = 'Created Make'
+      and model = 'Created Model'
+  ),
+  'mapped admin can create a Vehicle with text Year, Body, registration state, and caller-owned ownership'
 );
 
 update public.vehicles
-set model = 'Updated Model'
-where id = '23000000-0000-4000-8000-000000000003';
+set model = 'Updated Model',
+  year = '2020',
+  registration_state = 'VIC',
+  body = 'Wagon'
+where make = 'Created Make'
+  and model = 'Created Model';
 
-select extensions.is(
+select extensions.ok(
   (
-    select model
+    select model = 'Updated Model'
+      and year = '2020'
+      and registration_state = 'VIC'
+      and body = 'Wagon'
     from public.vehicles
-    where id = '23000000-0000-4000-8000-000000000003'
+    where make = 'Created Make'
+      and model = 'Updated Model'
   ),
-  'Updated Model'::text,
-  'mapped admin can update a Vehicle'
+  'mapped admin can update a Vehicle text Year, Body, and registration state'
 );
 select extensions.ok(
   (
     select archived_at is not null
-    from public.archive_vehicle('23000000-0000-4000-8000-000000000003')
+    from public.archive_vehicle((
+      select id
+      from public.vehicles
+      where make = 'Created Make'
+        and model = 'Updated Model'
+    ))
   ),
   'mapped admin can archive an active Vehicle atomically'
 );
 select extensions.ok(
   (
     select archived_at is null
-    from public.restore_vehicle('23000000-0000-4000-8000-000000000003')
+    from public.restore_vehicle((
+      select id
+      from public.vehicles
+      where make = 'Created Make'
+        and model = 'Updated Model'
+    ))
   ),
   'mapped admin can restore an archived Vehicle atomically'
 );
 
 delete from public.vehicles
-where id = '23000000-0000-4000-8000-000000000003';
+where make = 'Created Make'
+  and model = 'Updated Model';
 
 select extensions.is(
   (
     select count(*)::integer
     from public.vehicles
-    where id = '23000000-0000-4000-8000-000000000003'
+    where make = 'Created Make'
+      and model = 'Updated Model'
   ),
   0,
   'mapped admin can permanently delete a current Vehicle'
@@ -543,6 +618,67 @@ select extensions.ok(
   'composite Vehicle and owner uniqueness constraint is installed'
 );
 select extensions.is(
+  (
+    select data_type::text
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'vehicles'
+      and column_name = 'year'
+  ),
+  'text'::text,
+  'Year is persisted as text after the forward conversion'
+);
+select extensions.is(
+  (
+    select data_type::text
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'vehicles'
+      and column_name = 'body'
+  ),
+  'text'::text,
+  'Body is persisted as nullable text'
+);
+select extensions.ok(
+  exists (
+    select 1
+    from pg_catalog.pg_constraint
+    where conrelid = 'public.vehicles'::regclass
+      and conname = 'vehicles_year_not_blank'
+      and contype = 'c'
+  ),
+  'nullable Year nonblank constraint is installed'
+);
+select extensions.ok(
+  exists (
+    select 1
+    from pg_catalog.pg_constraint
+    where conrelid = 'public.vehicles'::regclass
+      and conname = 'vehicles_year_length'
+      and contype = 'c'
+  ),
+  'Year text length constraint is installed'
+);
+select extensions.ok(
+  exists (
+    select 1
+    from pg_catalog.pg_constraint
+    where conrelid = 'public.vehicles'::regclass
+      and conname = 'vehicles_body_length'
+      and contype = 'c'
+  ),
+  'Body text length constraint is installed'
+);
+select extensions.ok(
+  not exists (
+    select 1
+    from pg_catalog.pg_constraint
+    where conrelid = 'public.vehicles'::regclass
+      and conname = 'vehicles_year_range'
+  ),
+  'the legacy numeric Year range constraint is removed'
+);
+select extensions.is(
   pg_temp.sqlstate_for(
     $statement$
       insert into public.vehicles (owner_id, make, model)
@@ -606,12 +742,12 @@ select extensions.is(
         '21000000-0000-4000-8000-000000000001',
         'Constraint Make',
         'Constraint Model',
-        1899
+        ''
       )
     $statement$
   ),
   '23514'::text,
-  'year cannot be below 1900'
+  'year must not be blank'
 );
 select extensions.is(
   pg_temp.sqlstate_for(
@@ -621,12 +757,27 @@ select extensions.is(
         '21000000-0000-4000-8000-000000000001',
         'Constraint Make',
         'Constraint Model',
-        10000
+        repeat('Y', 51)
       )
     $statement$
   ),
   '23514'::text,
-  'year cannot exceed 9999'
+  'year cannot exceed 50 characters'
+);
+select extensions.is(
+  pg_temp.sqlstate_for(
+    $statement$
+      insert into public.vehicles (owner_id, make, model, year)
+      values (
+        '21000000-0000-4000-8000-000000000001',
+        'Constraint Make',
+        'Constraint Model',
+        E'\t  '
+      )
+    $statement$
+  ),
+  '23514'::text,
+  'year must contain a non-whitespace character'
 );
 select extensions.is(
   pg_temp.sqlstate_for(
@@ -642,6 +793,53 @@ select extensions.is(
   ),
   '23514'::text,
   'registration cannot exceed 50 characters'
+);
+select extensions.is(
+  pg_temp.sqlstate_for(
+    $statement$
+      insert into public.vehicles (owner_id, make, model, registration_state)
+      values (
+        '21000000-0000-4000-8000-000000000001',
+        'Constraint Make',
+        'Constraint Model',
+        'NZ'
+      )
+    $statement$
+  ),
+  '23514'::text,
+  'registration state must be an approved Australian code'
+);
+select extensions.is(
+  pg_temp.sqlstate_for(
+    $statement$
+      insert into public.vehicles (owner_id, make, model, registration_state)
+      values (
+        '21000000-0000-4000-8000-000000000001',
+        'Constraint Make',
+        'Constraint Model',
+        'wa'
+      )
+    $statement$
+  ),
+  '23514'::text,
+  'registration state rejects lowercase codes'
+);
+insert into public.vehicles (owner_id, make, model, registration_state)
+select
+  '21000000-0000-4000-8000-000000000001',
+  'Allowed State Make',
+  'Allowed State ' || code,
+  code
+from unnest(array['ACT', 'NSW', 'NT', 'QLD', 'SA', 'TAS', 'VIC', 'WA']) as code;
+
+select extensions.is(
+  (
+    select count(*)::integer
+    from public.vehicles
+    where make = 'Allowed State Make'
+  ),
+  8,
+  'all approved registration state codes are accepted'
 );
 select extensions.is(
   pg_temp.sqlstate_for(
@@ -721,6 +919,21 @@ select extensions.is(
 select extensions.is(
   pg_temp.sqlstate_for(
     $statement$
+      insert into public.vehicles (owner_id, make, model, body)
+      values (
+        '21000000-0000-4000-8000-000000000001',
+        'Constraint Make',
+        'Constraint Model',
+        repeat('B', 51)
+      )
+    $statement$
+  ),
+  '23514'::text,
+  'Body cannot exceed 50 characters'
+);
+select extensions.is(
+  pg_temp.sqlstate_for(
+    $statement$
       insert into public.vehicles (owner_id, make, model, notes)
       values (
         '21000000-0000-4000-8000-000000000001',
@@ -783,7 +996,7 @@ values (
   '21000000-0000-4000-8000-000000000001',
   repeat('M', 50),
   repeat('D', 50),
-  1900,
+  '2018-2021',
   repeat('R', 50),
   repeat('V', 50),
   0,
@@ -798,8 +1011,8 @@ select extensions.is(
     from public.vehicles
     where id = '23000000-0000-4000-8000-000000000005'
   ),
-  1900,
-  'lower boundaries and exact text limits are accepted'
+  '2018-2021'::text,
+  'provider Year ranges and exact text limits are accepted'
 );
 
 insert into public.vehicles (
@@ -843,7 +1056,7 @@ values (
   '21000000-0000-4000-8000-000000000001',
   'Upper Year Make',
   'Upper Year Model',
-  9999,
+  '9999',
   9007199254740991
 );
 
@@ -978,6 +1191,38 @@ select extensions.ok(
 select extensions.ok(
   not has_table_privilege('anon', 'public.vehicles', 'select'),
   'anonymous role has no direct Vehicle read capability'
+);
+select extensions.ok(
+  has_column_privilege('authenticated', 'public.vehicles', 'year', 'insert'),
+  'authenticated role retains minimum Year insert capability'
+);
+select extensions.ok(
+  has_column_privilege('authenticated', 'public.vehicles', 'year', 'update'),
+  'authenticated role retains minimum Year update capability'
+);
+select extensions.ok(
+  has_column_privilege('authenticated', 'public.vehicles', 'body', 'insert'),
+  'authenticated role has minimum Body insert capability'
+);
+select extensions.ok(
+  has_column_privilege('authenticated', 'public.vehicles', 'body', 'update'),
+  'authenticated role has minimum Body update capability'
+);
+select extensions.ok(
+  not has_column_privilege('anon', 'public.vehicles', 'year', 'insert'),
+  'anonymous role has no Year insert capability'
+);
+select extensions.ok(
+  not has_column_privilege('anon', 'public.vehicles', 'year', 'update'),
+  'anonymous role has no Year update capability'
+);
+select extensions.ok(
+  not has_column_privilege('anon', 'public.vehicles', 'body', 'insert'),
+  'anonymous role has no Body insert capability'
+);
+select extensions.ok(
+  not has_column_privilege('anon', 'public.vehicles', 'body', 'update'),
+  'anonymous role has no Body update capability'
 );
 select extensions.ok(
   has_function_privilege(

@@ -19,7 +19,7 @@ describe('Vehicle database integration suite source', () => {
   it('is transactional, deterministic, and synthetic', () => {
     expect(databaseSuite).toMatch(/^begin;/iu);
     expect(databaseSuite).toMatch(/rollback;\s*$/iu);
-    expect(databaseSuite).toContain('extensions.plan(75)');
+    expect(databaseSuite).toContain('extensions.plan(99)');
     expect(databaseSuite).toContain('Synthetic Vehicle Admin');
     expect(databaseSuite).not.toMatch(
       /gmail\.com|@googlemail|service[_-]?role[_-]?key/iu,
@@ -117,16 +117,22 @@ describe('Vehicle database integration suite source', () => {
       'make cannot exceed 50 characters',
       'model must not be blank',
       'model cannot exceed 50 characters',
-      'year cannot be below 1900',
-      'year cannot exceed 9999',
+      'year must not be blank',
+      'year must contain a non-whitespace character',
+      'year cannot exceed 50 characters',
       'registration cannot exceed 50 characters',
+      'registration state must be an approved Australian code',
+      'registration state rejects lowercase codes',
+      'all approved registration state codes are accepted',
+      'existing compatible Vehicles may omit registration state',
       'VIN cannot exceed 50 characters',
       'odometer cannot be negative',
       'odometer cannot exceed the safe integer maximum',
       'odometer unit must be km or mi',
       'engine cannot exceed 50 characters',
+      'Body cannot exceed 50 characters',
       'notes cannot exceed 500 characters',
-      'lower boundaries and exact text limits are accepted',
+      'provider Year ranges and exact text limits are accepted',
       'upper year boundary is accepted and odometer unit defaults to km',
       'safe integer odometer maximum is accepted',
       'non-BMP text one code point over the limit is rejected',
@@ -138,6 +144,32 @@ describe('Vehicle database integration suite source', () => {
 
     expect(databaseSuite).toMatch(/repeat\(U&'\\\+01F600', 50\)/u);
     expect(databaseSuite).toContain('char_length(notes) = 500');
+  });
+
+  it('covers text Year and Body conversion, constraints, grants, and round trips', () => {
+    for (const assertion of [
+      'mapped admin reads the preserved text Year value',
+      'mapped admin can read persisted Body',
+      'existing compatible Vehicles may omit Year and Body',
+      'mapped admin can create a Vehicle with text Year, Body',
+      'mapped admin can update a Vehicle text Year, Body',
+      'Year is persisted as text after the forward conversion',
+      'Body is persisted as nullable text',
+      'nullable Year nonblank constraint is installed',
+      'Year text length constraint is installed',
+      'Body text length constraint is installed',
+      'the legacy numeric Year range constraint is removed',
+      'authenticated role retains minimum Year insert capability',
+      'authenticated role retains minimum Year update capability',
+      'authenticated role has minimum Body insert capability',
+      'authenticated role has minimum Body update capability',
+      'anonymous role has no Year insert capability',
+      'anonymous role has no Year update capability',
+      'anonymous role has no Body insert capability',
+      'anonymous role has no Body update capability',
+    ]) {
+      expect(databaseSuite).toContain(assertion);
+    }
   });
 
   it('covers active and archived behavior plus direct table and RPC access', () => {

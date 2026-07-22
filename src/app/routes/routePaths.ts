@@ -3,6 +3,7 @@ import { resolveSafeReturnPath } from '../../shared/validation/safeReturnPath';
 export const SIGN_IN_PATH = '/sign-in';
 export const AUTH_CALLBACK_PATH = '/auth/callback';
 export const ACCESS_UNAVAILABLE_PATH = '/access-unavailable';
+export const REGISTRATION_LOOKUP_PRIVACY_PATH = '/privacy/registration-lookup';
 export const DASHBOARD_PATH = '/dashboard';
 export const VEHICLES_PATH = '/vehicles';
 export const ARCHIVED_VEHICLES_PATH = '/vehicles/archived';

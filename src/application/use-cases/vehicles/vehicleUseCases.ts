@@ -122,6 +122,9 @@ export class VehicleUseCases {
       ...(input.registration === undefined
         ? {}
         : { registration: input.registration }),
+      ...(input.registrationState === undefined
+        ? {}
+        : { registrationState: input.registrationState }),
     };
     const duplicateResult = await this.callRepository(() => (
       excludeVehicleId === undefined

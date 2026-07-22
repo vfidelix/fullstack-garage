@@ -16,6 +16,7 @@ import {
   useRestoreVehicleMutation,
   useUpdateVehicleMutation,
   useVehicleQuery,
+  clearVehiclePrivateCache,
   vehicleMutationKeys,
   vehicleQueryKeys,
 } from './vehicleQueries';
@@ -28,8 +29,9 @@ const summary: VehicleSummary = {
   id: 'vehicle-1',
   make: 'Ferrari',
   model: 'Roma',
-  year: 2021,
+  year: '2021',
   registration: 'TEST 123',
+  registrationState: 'WA',
   currentOdometer: 12000,
   odometerUnit: 'km',
 };
@@ -210,7 +212,7 @@ describe('Vehicle mutations', () => {
     const invalidate = vi.spyOn(client, 'invalidateQueries');
     const duplicateWarning = {
       vehicleId: 'vehicle-duplicate',
-      label: '2021 Ferrari Roma · TEST 123',
+      label: '2021 Ferrari Roma · TEST 123 WA',
     };
     const operations = createOperations({
       createVehicle: vi.fn().mockResolvedValue({
@@ -339,5 +341,23 @@ describe('Vehicle mutations', () => {
       odometerUnit: 'km',
     })).rejects.toMatchObject(safeError);
     expect(invalidate).not.toHaveBeenCalled();
+  });
+
+  it('removes registration-state-bearing private query data during cleanup', async () => {
+    const client = createClient();
+    client.setQueryData(vehicleQueryKeys.active, [summary]);
+    client.setQueryData(vehicleQueryKeys.detail(vehicle.id), vehicle);
+    client.setQueryData(vehicleQueryKeys.duplicateFeedback(0, vehicle.id), {
+      vehicleId: 'vehicle-duplicate',
+      label: '2021 Ferrari Roma · TEST 123 WA',
+    });
+
+    expect(JSON.stringify(client.getQueriesData({
+      queryKey: vehicleQueryKeys.all,
+    }))).toContain('WA');
+
+    await clearVehiclePrivateCache(client);
+
+    expect(client.getQueriesData({ queryKey: vehicleQueryKeys.all })).toEqual([]);
   });
 });

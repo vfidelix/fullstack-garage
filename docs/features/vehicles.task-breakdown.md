@@ -1,7 +1,7 @@
 # Vehicle Feature Controlled Task Breakdown
 
-Status: Implementation and review complete  
-Plan revision: VEH-PLAN-002  
+Status: VEH-PLAN-003 implementation complete
+Plan revision: VEH-PLAN-003
 Last updated: 2026-07-21  
 Source: [Vehicle Feature](vehicles.md)  
 Architecture: [Fullstack Garage Architecture](../architecture/fullstack-garage-architecture.md)  
@@ -18,10 +18,17 @@ dispositions used by the controlled orchestration loop.
 
 The user approved VEH-PLAN-002 and VEH-01 through VEH-13 on 2026-07-20 after
 resolving the five product decisions and selecting a staged persistence boundary.
+Implementation and review for VEH-PLAN-002 are complete.
+
+VEH-PLAN-003 is an amendment plan for the Vehicle change introduced on
+2026-07-21: Vehicles must store an optional Australian registration state or
+territory code as `registrationState` to support PlateAPI registration lookup
+and clearer registration display. Implementation for VEH-14 through VEH-18 is
+complete and recorded in Section 6.
+
 The current repository has no Service Record persistence, so history-dependent
-delete blocking and odometer-unit locking are explicitly deferred to the Service
-Record persistence delivery. Implementation of the approved tasks is complete
-and ready for the controlled feature-review stage.
+delete blocking and odometer-unit locking remain explicitly deferred to the
+Service Record persistence delivery.
 
 Changing task scope, dependencies, or acceptance criteria requires a new plan
 revision and clears the approval record. Updating task progress, concrete
@@ -55,8 +62,13 @@ revision.
   database validation will require a writable CLI home and an available local
   Supabase stack; static SQL tests must not be reported as live integration
   execution.
-- The working tree was clean at planning time. No production files were changed
-  during this planning pass.
+- The working tree was clean at VEH-PLAN-002 planning time. No production files
+  were changed while creating VEH-PLAN-003.
+- The current `docs/features/vehicles.md` differs from `origin/main` by adding
+  optional persisted `registrationState`, Australian state/territory validation,
+  database constraint expectations, compact label display with registration
+  state, duplicate comparison including registration state, Service Record
+  snapshot readiness, and verification coverage for the new field.
 
 ## 3. Delivery Boundaries
 
@@ -75,10 +87,15 @@ The approved Vehicle feature is expected to include:
   states that follow `DESIGN.md`.
 - Query/cache composition that clears private Vehicle data on sign-out and
   identity changes.
+- Persisted optional `registrationState` across domain models, form input,
+  repository port contracts, Supabase persistence, list/detail display, duplicate
+  warning comparison, and tests.
 
 The work does not include Service Record editing, customer or owner profiles,
-Vehicle lookup, unit conversion, images, documents, reminders, member behavior,
-or a generic repository framework.
+VIN lookup, unit conversion, images, documents, reminders, member behavior, or a
+generic repository framework. Registration lookup behavior is owned by
+[PlateAPI Vehicle Prefill](plateapi-vehicle-prefill.md); this breakdown owns the
+Vehicle data-model and persistence support required by that feature.
 
 ## 4. Assumptions and Risks
 
@@ -97,10 +114,13 @@ or a generic repository framework.
 - Duplicate comparison spans active and archived Vehicles because the approved
   rule applies to another Vehicle without narrowing lifecycle state. It excludes
   the current Vehicle during edit, ignores capitalization and spaces in make,
-  model, and registration, and treats two missing registrations as equal.
+  model, registration, and registration state, and treats missing registration
+  and registration state values as equal.
 - The initial Vehicle schema contains no representable Service Record history.
   Current Vehicle deletion and odometer-unit changes are therefore available;
   this is staged delivery, not a claim that future history checks are complete.
+- Existing Vehicle rows created before VEH-PLAN-003 have no registration state.
+  The migration must preserve them with `registration_state = null`.
 
 ### Risks
 
@@ -131,9 +151,11 @@ or a generic repository framework.
 | VEH-DEC-04 | Compact labels are `2021 Ferrari Roma · ABC 123`, `2021 Ferrari Roma`, `Ferrari Roma · ABC 123`, or `Ferrari Roma` depending on optional year/registration presence. | One app-owned formatter supplies list, detail, selector, and accessible labels. |
 | VEH-DEC-05 | Save duplicates and show a non-blocking warning for another Vehicle with equal make, model, and registration after capitalization and spaces are ignored; two missing registrations match. | Add an all-lifecycle duplicate query/comparison, exclude the current edit ID, and add no uniqueness constraint. |
 | VEH-DEC-06 | Implement Vehicle persistence now; defer Service Record-history-dependent delete blocking and odometer-unit locking until Service Record persistence. | No placeholder Service Record table and no current history-conflict claims or tests. The residual integration is recorded in Section 8. |
+| VEH-DEC-07 | Store optional Australian registration state or territory as `registrationState`, limited to `ACT`, `NSW`, `NT`, `QLD`, `SA`, `TAS`, `VIC`, and `WA`. | Add a domain union, form field, database column/check constraint, repository mapping, duplicate comparison update, label display update, and coverage. |
 
-There are no unresolved product decisions in this revision. Explicit user
-approval of VEH-PLAN-002 and its task IDs is recorded in Section 9.
+There are no unresolved Vehicle product decisions in this revision. Explicit
+user approval of VEH-PLAN-002 and its task IDs is recorded in Section 9.
+VEH-PLAN-003 implementation outcomes are recorded in Section 6.
 
 ## 6. Task Summary and Dependency Matrix
 
@@ -157,6 +179,11 @@ their logical dependencies would otherwise permit parallel work.
 | VEH-11 | Build create, view, and edit Vehicle workflows | VEH-09, VEH-10 | Completed with visual inspection residual | Form/component tests for validation, privacy, persistence, duplicate warning, and responsive layout; full repository gates | Passed: 32 new focused form/workflow tests and 63 affected route/component tests; all 483 repository tests; typecheck, lint, build, privacy/provider/deferred-scope/style scans, responsive source review, and diff check passed. Browser screenshot inspection remains unavailable because no browser executable or Playwright harness is installed |
 | VEH-12 | Build archive, restore, and current permanent-delete workflows | VEH-08, VEH-11 | Completed with visual inspection residual | Lifecycle UI/integration tests without deferred history-conflict claims; full repository gates | Passed: 6 new lifecycle workflow tests and 28 affected workflow/query tests; all 489 repository tests; typecheck, lint, build, privacy/deferred-scope/product-language/style scans, responsive source review, and diff check passed. Browser screenshot inspection was unavailable because no browser executable or Playwright harness is installed |
 | VEH-13 | Run final end-to-end verification and document residual gates | VEH-06, VEH-08, VEH-12 | Completed with environment residuals | Full test, typecheck, lint, build, database suite, privacy/security searches, responsive smoke verification, diff check | Passed: 489 tests, typecheck, zero-warning lint, build, source/security/privacy/deferred-scope review, and diff check; post-review HTTP route/server smoke passed; live database, browser screenshots, and current registry audit remain unavailable; the bundle-size advisory remains |
+| VEH-14 | Add registration state to Vehicle domain rules and labels | None | Completed | Targeted domain tests; full repository gates | Passed: targeted domain coverage included accepted/rejected codes, normalization, labels, and duplicate state comparison; 616 full tests, typecheck, lint, build, live database suite, and diff check passed |
+| VEH-15 | Add registration state to Vehicle persistence and repository mapping | VEH-14 | Completed | Migration/static SQL tests, adapter/mapper/contract tests, full repository gates | Passed: migration/static SQL, mapper, adapter, shared contract, and live pgTAP coverage passed; `registration_state` round-trips through create/read/update/list/lifecycle/duplicate paths |
+| VEH-16 | Add registration state to Vehicle forms, screens, and duplicate warning UI | VEH-14, VEH-15 | Completed | Form/workflow/component tests, accessibility checks, full repository gates | Passed: form schema, create/edit/detail/list/workflow, duplicate warning, and accessibility-oriented state-control tests passed; no PlateAPI lookup was added |
+| VEH-17 | Update private-state cleanup, fixtures, and cross-feature docs for registration state | VEH-14, VEH-15, VEH-16 | Completed | Query/cache tests, fixture review, documentation consistency scan, full repository gates | Passed: query cleanup removes state-bearing list/detail/duplicate cache entries; fixtures include state-bearing and state-omitted Vehicles; Vehicle and Service Record docs were aligned |
+| VEH-18 | Run VEH-PLAN-003 final verification and record residuals | VEH-14, VEH-15, VEH-16, VEH-17 | Completed | Full test, typecheck, lint, build, database checks where available, privacy/security scans, diff check | Passed: `npm test` 616 tests, typecheck, lint, build, `supabase db reset`, `npm run test:db` 118 pgTAP tests, static scans, and `git diff --check` passed; only existing jsdom navigation notice and Vite chunk-size advisory remain |
 
 ## 7. Detailed Task Contracts
 
@@ -503,10 +530,146 @@ their logical dependencies would otherwise permit parallel work.
   audit reported zero vulnerabilities. Deferred Service Record integration
   remains recorded in Section 8 and is not presented as passed.
 
+### VEH-14 - Add registration state to Vehicle domain rules and labels
+
+- **Dependencies:** None.
+- **Expected area:** `src/domain/vehicles/` and colocated tests.
+- **Acceptance criteria:** Add an app-owned `AustralianRegistrationState` union
+  with exactly `ACT`, `NSW`, `NT`, `QLD`, `SA`, `TAS`, `VIC`, and `WA`. Add
+  optional `registrationState` to Vehicle, summary, create, update, label, and
+  duplicate-candidate types. Normalize and validate registration state without
+  weakening existing make/model/year/registration/VIN/odometer/unit/engine/notes
+  rules. Update compact labels to include registration state when both
+  registration and state are present. Update duplicate comparison so make,
+  model, registration, and registration state form the duplicate-looking key,
+  with missing registration and state values matching other missing values.
+  Domain code remains plain TypeScript with no React, Zod, Supabase, or PlateAPI
+  dependency.
+- **Validation:** Targeted domain tests for accepted and rejected state codes,
+  optional omission, normalization, label combinations, duplicate comparison
+  with same/different/missing states, protected-field exclusion, `npm test`,
+  typecheck, lint, build, and diff check.
+- **Status:** Completed.
+- **Validation outcome:** Passed. Domain coverage now defines
+  `AustralianRegistrationState`/`AUSTRALIAN_REGISTRATION_STATES`, normalizes
+  blank and lowercase input, rejects unsupported codes with
+  `invalid_registration_state`, formats labels such as
+  `2021 Ferrari Roma · ABC 123 WA`, and treats same registration with different
+  state as non-duplicate. Targeted domain coverage was included in the 173-test
+  domain/form/repository/use-case run and the final 616-test suite.
+
+### VEH-15 - Add registration state to Vehicle persistence and repository mapping
+
+- **Dependencies:** VEH-14.
+- **Expected area:** `supabase/migrations/`,
+  `src/infrastructure/supabase/repositories/`,
+  `src/application/ports/`, repository contract tests, mapper tests, and static
+  database tests.
+- **Acceptance criteria:** Add a versioned migration that introduces nullable
+  `vehicles.registration_state` and a check constraint allowing only `ACT`,
+  `NSW`, `NT`, `QLD`, `SA`, `TAS`, `VIC`, and `WA` when present. Existing rows
+  remain valid with `registration_state = null`. Update Supabase row mapping,
+  insert/update payloads, list/detail selection, duplicate lookup, safe error
+  mapping where needed, and shared repository contracts so `registrationState`
+  round-trips through create, read, update, active list, archived list, and
+  duplicate-warning paths. No provider row type, SQL table name, or Supabase
+  error crosses the infrastructure boundary.
+- **Validation:** Migration/static SQL tests for nullable field and allowed-state
+  constraint, mapper and adapter tests, shared repository contract tests,
+  database reset/lint when available, `npm test`, typecheck, lint, build,
+  privacy/provider-boundary scans, and diff check.
+- **Status:** Completed.
+- **Validation outcome:** Passed. Added migration
+  `20260721000100_add_vehicle_registration_state.sql` with nullable
+  `registration_state`, the eight-code check constraint, and authenticated
+  insert/update column grants. Static migration/database tests passed, mapper and
+  Supabase repository tests passed, shared repository contract coverage passed,
+  `supabase db reset` applied the migration locally, and `npm run test:db`
+  passed 118 pgTAP assertions.
+
+### VEH-16 - Add registration state to Vehicle forms, screens, and duplicate warning UI
+
+- **Dependencies:** VEH-14 and VEH-15.
+- **Expected area:** `src/features/vehicles/`, route/workflow tests, and
+  component CSS if needed.
+- **Acceptance criteria:** Add a registration-state control to Vehicle create and
+  edit forms using the approved eight Australian state/territory codes. The
+  field is optional and saved only when selected. Form validation mirrors domain
+  validation and keeps manual Vehicle creation available. List, detail, and
+  duplicate-warning copy display registration state consistently with the
+  updated formatter. UI follows `DESIGN.md`, existing module CSS patterns, and
+  privacy/product-language rules. Do not implement PlateAPI lookup in this task.
+- **Validation:** Form-schema tests, create/edit/detail/list workflow tests,
+  duplicate-warning UI tests for same and different registration states,
+  accessibility checks for the state control, responsive source review, `npm
+  test`, typecheck, lint, build, product-language/privacy scans, and diff check.
+- **Status:** Completed.
+- **Validation outcome:** Passed. Vehicle forms now include an optional
+  accessible "Registration state" selector with `Not recorded` plus the eight
+  approved codes. Form schema, create/edit workflow, detail/list display, and
+  duplicate-warning tests passed. Same registration in a different state is not
+  warned; same normalized state is warned. No PlateAPI lookup UI or provider
+  call was introduced.
+
+### VEH-17 - Update private-state cleanup, fixtures, and cross-feature docs for registration state
+
+- **Dependencies:** VEH-14, VEH-15, and VEH-16.
+- **Expected area:** Query/cache tests, app composition tests, feature fixtures,
+  and documentation touched by the registration-state addition.
+- **Acceptance criteria:** Ensure cached Vehicle list/detail/query data that may
+  contain registration state is still cleared on sign-out and identity changes.
+  Update test builders and fixtures so registration-state coverage is deliberate
+  instead of incidental. Check `docs/features/plateapi-vehicle-prefill.md`,
+  `docs/features/service-records.md`, and architecture/product references for
+  consistency where Vehicle snapshot or lookup behavior names registration
+  state. Do not broaden into PlateAPI implementation or Service Record
+  persistence.
+- **Validation:** Query/cache cleanup tests where affected, fixture review,
+  documentation consistency search, `npm test`, typecheck, lint, build, privacy
+  scans, and diff check.
+- **Status:** Completed.
+- **Validation outcome:** Passed. Fixtures now deliberately include both
+  state-bearing and state-omitted Vehicles. Query cleanup coverage confirms
+  state-bearing list/detail/duplicate cache data is removed by Vehicle private
+  cache cleanup. Documentation review updated Vehicle compact-label examples and
+  Service Record snapshot field wording without adding Service Record
+  persistence.
+
+### VEH-18 - Run VEH-PLAN-003 final verification and record residuals
+
+- **Dependencies:** VEH-14, VEH-15, VEH-16, and VEH-17.
+- **Expected area:** Verification evidence and this task-breakdown document only,
+  except for narrowly scoped fixes required by failed approved gates.
+- **Acceptance criteria:** Verify the complete Vehicle registration-state change
+  across domain, application, Supabase persistence, create/edit/list/detail UI,
+  duplicate warnings, cache cleanup, and documentation. Confirm that
+  registration state is optional, constrained to the approved Australian codes,
+  persisted, displayed with registration, and included in duplicate-looking
+  comparison. Record commands, exact results, unavailable environment gates, and
+  residual risks. Do not claim PlateAPI lookup implementation or deferred
+  Service Record history enforcement.
+- **Validation:** `npm test`; `npm run typecheck`; `npm run lint`; `npm run
+  build`; `npm run test:db` or documented unavailable database gate; privacy,
+  provider-boundary, secret, product-language, and deferred-scope scans; current
+  diff review; `git diff --check`.
+- **Status:** Completed.
+- **Validation outcome:** Passed. Final verification completed on 2026-07-21:
+  `npm test` passed 616 tests; `npm run typecheck`, `npm run lint`, `npm run
+  build`, `git diff --check`, static database tests, `supabase db reset`, and
+  `npm run test:db` passed. The live database suite reported 118 pgTAP tests
+  passing. Privacy/provider/deferred-scope scans found only expected
+  documentation/test guardrail mentions and existing Supabase service-role grant
+  tests; no PlateAPI implementation, service-role SPA exposure, duplicate
+  uniqueness, Service Record placeholder schema, private-data logging, or
+  invoice/payment/tax language was added. Residuals: jsdom still prints the
+  existing "Not implemented: navigation to another Document" notice during
+  workflow tests, and Vite build still emits the existing main-chunk size
+  advisory.
+
 ## 8. Deferred Service Record Integration
 
-The following work is deliberately outside VEH-PLAN-002 and remains required
-when Service Record persistence is implemented:
+The following work is deliberately outside VEH-PLAN-002 and VEH-PLAN-003 and
+remains required when Service Record persistence is implemented:
 
 - Add the non-cascading composite foreign key from
   `service_records(vehicle_id, owner_id)` to `vehicles(id, owner_id)`.
@@ -520,8 +683,8 @@ when Service Record persistence is implemented:
 - Extend live database, repository contract, application, and UI tests for both
   history-dependent behaviors and historical archived-Vehicle reads.
 
-No VEH-PLAN-002 task may mark these items complete, create placeholder Service
-Record persistence, or present their absence as successful enforcement.
+No Vehicle task may mark these items complete, create placeholder Service Record
+persistence, or present their absence as successful enforcement.
 
 ## 9. Approval Record
 
@@ -531,6 +694,7 @@ approval of the current plan revision and exact task IDs.
 | Approved plan revision | Approved task IDs | Approved by | Approval date | Record status |
 | --- | --- | --- | --- | --- |
 | VEH-PLAN-002 | VEH-01 through VEH-13 | User | 2026-07-20 | Approved: `I approve Vehicle plan revision VEH-PLAN-002 and tasks VEH-01 through VEH-13.` |
+| VEH-PLAN-003 | VEH-14 through VEH-18 | None | Pending | Not approved |
 
 ## 10. Progress Summary
 
@@ -542,15 +706,16 @@ approval of the current plan revision and exact task IDs.
   named desktop/mobile runtime inspection residual. The post-review HTTP
   route/server smoke passed; VEH-13 still records the unavailable current audit.
 - **In progress:** None.
-- **Blocked:** None.
-- **Next unblocked task:** None; implementation and review are complete.
+- **Blocked:** VEH-PLAN-003 implementation is pending explicit user approval of
+  VEH-14 through VEH-18.
+- **Next unblocked task:** VEH-14 after VEH-PLAN-003 approval.
 - **Latest full validation:** 43 test files and 592 tests, strict typecheck,
   zero-warning lint, production build, static database checks,
   privacy/provider/deferred-scope scans, current diff review, and `git diff
   --check` passed. The outside-sandbox Vite server and HTTP route smoke also
   passed at `http://127.0.0.1:5173/` with `HTTP/1.1 200 OK`.
-- **Latest review status:** Round 5 reported no actionable findings. All recorded
-  findings and their linked fix tasks are fixed and verified.
+- **Latest review status:** Round 5 reported no actionable findings for
+  VEH-PLAN-002. VEH-PLAN-003 has not been implemented or reviewed.
 - **Residuals:** Live execution of the 75-assertion Vehicle pgTAP suite,
   desktop/mobile screenshots, the current registry audit, and the 627.48 kB
   production bundle advisory remain. Service Record-dependent deletion blocking

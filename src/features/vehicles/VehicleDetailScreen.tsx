@@ -69,6 +69,10 @@ function VehicleDetails({ vehicle }: { readonly vehicle: Vehicle }) {
         <dd>{displayValue(vehicle.registration)}</dd>
       </div>
       <div className={styles.detail}>
+        <dt>Registration state</dt>
+        <dd>{displayValue(vehicle.registrationState)}</dd>
+      </div>
+      <div className={styles.detail}>
         <dt>VIN</dt>
         <dd>{displayValue(vehicle.vin)}</dd>
       </div>
@@ -83,6 +87,10 @@ function VehicleDetails({ vehicle }: { readonly vehicle: Vehicle }) {
       <div className={styles.detail}>
         <dt>Engine</dt>
         <dd>{displayValue(vehicle.engine)}</dd>
+      </div>
+      <div className={styles.detail}>
+        <dt>Body</dt>
+        <dd>{displayValue(vehicle.body)}</dd>
       </div>
       <div className={`${styles.detail ?? ''} ${styles.detailFull ?? ''}`}>
         <dt>Notes</dt>

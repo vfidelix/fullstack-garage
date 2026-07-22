@@ -1,11 +1,13 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "fullstack-garage",
+  "main": "src/worker.ts",
   "compatibility_date": "2026-07-19",
   "observability": {
     "enabled": true
   },
   "assets": {
+    "binding": "ASSETS",
     "not_found_handling": "single-page-application"
   },
   "compatibility_flags": [

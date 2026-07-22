@@ -16,7 +16,7 @@ const activeVehicle: VehicleSummary = {
   id: 'active-vehicle',
   make: 'Ferrari',
   model: 'Roma',
-  year: 2021,
+  year: '2021',
   odometerUnit: 'km',
 };
 

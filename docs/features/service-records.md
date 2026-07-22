@@ -406,8 +406,8 @@ The snapshot contains:
 - Snapshot schema version and PDF template version.
 - Service Record UUID, display number, status, and record version.
 - Service and generation dates.
-- Vehicle make, model, year, registration, VIN, engine, and odometer unit as
-  available at generation time.
+- Vehicle make, model, year, registration, registration state, VIN, engine, and
+  odometer unit as available at generation time.
 - Service odometer, performer, location, summary, notes, and next-service details.
 - Ordered work, material, inspection, and other items.
 - Each recorded Purchase Cost, derived Total Parts & Consumables, and currency.

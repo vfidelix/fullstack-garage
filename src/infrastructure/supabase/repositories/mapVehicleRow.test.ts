@@ -7,12 +7,14 @@ const fullRow = {
   owner_id: '20000000-0000-4000-8000-000000000001',
   make: 'Ferrari',
   model: 'Roma',
-  year: 2021,
+  year: '2018-2021',
   registration: 'TEST 123',
+  registration_state: 'WA',
   vin: 'SYNTHETIC-VIN',
   current_odometer: 12_500,
   odometer_unit: 'km',
   engine: 'Synthetic V8',
+  body: 'Coupe',
   notes: 'Synthetic notes',
   archived_at: null,
   created_at: '2026-07-20T01:00:00.000Z',
@@ -27,12 +29,14 @@ describe('Vehicle Supabase row mapping', () => {
       ownerId: fullRow.owner_id,
       make: 'Ferrari',
       model: 'Roma',
-      year: 2021,
+      year: '2018-2021',
       registration: 'TEST 123',
+      registrationState: 'WA',
       vin: 'SYNTHETIC-VIN',
       currentOdometer: 12_500,
       odometerUnit: 'km',
       engine: 'Synthetic V8',
+      body: 'Coupe',
       notes: 'Synthetic notes',
       createdAt: fullRow.created_at,
       updatedAt: fullRow.updated_at,
@@ -47,6 +51,7 @@ describe('Vehicle Supabase row mapping', () => {
     });
     expect(mapVehicleSummaryRow(row)).toMatchObject({
       currentOdometer: VEHICLE_ODOMETER_MAX,
+      registrationState: 'WA',
     });
   });
 
@@ -58,6 +63,7 @@ describe('Vehicle Supabase row mapping', () => {
       registration: nonBmpCharacter.repeat(50),
       vin: nonBmpCharacter.repeat(50),
       engine: nonBmpCharacter.repeat(50),
+      body: nonBmpCharacter.repeat(50),
       notes: nonBmpCharacter.repeat(500),
     };
 
@@ -65,16 +71,31 @@ describe('Vehicle Supabase row mapping', () => {
       make: row.make,
       model: row.model,
       registration: row.registration,
+      registrationState: 'WA',
       vin: row.vin,
       engine: row.engine,
+      body: row.body,
       notes: row.notes,
     });
     expect(mapVehicleSummaryRow(row)).toMatchObject({
       make: row.make,
       model: row.model,
       registration: row.registration,
+      registrationState: 'WA',
     });
   });
+
+  it.each(['ACT', 'NSW', 'NT', 'QLD', 'SA', 'TAS', 'VIC', 'WA'] as const)(
+    'maps approved registration state %s',
+    (registration_state) => {
+      expect(mapVehicleRow({ ...fullRow, registration_state })).toMatchObject({
+        registrationState: registration_state,
+      });
+      expect(mapVehicleSummaryRow({ ...fullRow, registration_state })).toMatchObject({
+        registrationState: registration_state,
+      });
+    },
+  );
 
   it.each([
     ['make', 51],
@@ -82,6 +103,7 @@ describe('Vehicle Supabase row mapping', () => {
     ['registration', 51],
     ['vin', 51],
     ['engine', 51],
+    ['body', 51],
     ['notes', 501],
   ] as const)('rejects non-BMP %s rows one code point over the limit', (field, count) => {
     expect(mapVehicleRow({
@@ -97,9 +119,11 @@ describe('Vehicle Supabase row mapping', () => {
       model: ' Roma ',
       year: null,
       registration: ' ',
+      registration_state: null,
       vin: null,
       current_odometer: null,
       engine: null,
+      body: null,
       notes: null,
       archived_at: '2026-07-20T03:00:00.000Z',
     })).toEqual({
@@ -119,10 +143,15 @@ describe('Vehicle Supabase row mapping', () => {
     [],
     { ...fullRow, id: 'not-an-id' },
     { ...fullRow, owner_id: null },
-    { ...fullRow, year: 18_99 },
+    { ...fullRow, year: 2021 },
+    { ...fullRow, year: '   ' },
+    { ...fullRow, year: 'Y'.repeat(51) },
+    { ...fullRow, body: 123 },
     { ...fullRow, current_odometer: -1 },
     { ...fullRow, current_odometer: VEHICLE_ODOMETER_MAX + 1 },
     { ...fullRow, odometer_unit: 'miles' },
+    { ...fullRow, registration_state: 'NZ' },
+    { ...fullRow, registration_state: 'wa' },
     { ...fullRow, notes: 'x'.repeat(501) },
     { ...fullRow, created_at: 'not-a-timestamp' },
   ])('rejects a malformed full row %#', (row) => {
@@ -136,6 +165,7 @@ describe('Vehicle Supabase row mapping', () => {
       model: fullRow.model,
       year: fullRow.year,
       registration: fullRow.registration,
+      registration_state: fullRow.registration_state,
       current_odometer: fullRow.current_odometer,
       odometer_unit: fullRow.odometer_unit,
       archived_at: fullRow.archived_at,
@@ -145,8 +175,9 @@ describe('Vehicle Supabase row mapping', () => {
       id: fullRow.id,
       make: 'Ferrari',
       model: 'Roma',
-      year: 2021,
+      year: '2018-2021',
       registration: 'TEST 123',
+      registrationState: 'WA',
       currentOdometer: 12_500,
       odometerUnit: 'km',
     });
