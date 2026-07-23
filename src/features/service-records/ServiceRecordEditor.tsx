@@ -378,18 +378,20 @@ function ItemSection({ title, kind, items, onAdd, onChange, onRemove, onReorder,
     <section aria-labelledby={`section-${kind}`}>
       <div className={styles.sectionHeader}>
         <h2 id={`section-${kind}`}>{title}</h2>
-        <button className={styles.add} onClick={() => { onAdd(kind); }} type="button">
-          <Plus aria-hidden="true" />
-          Add
-          {' '}
-          {kind}
-        </button>
-        {kind === 'inspection' && (
-          <button className={styles.add} onClick={() => { onAdd('other'); }} type="button">
+        <div className={styles.sectionActions}>
+          <button className={styles.add} onClick={() => { onAdd(kind); }} type="button">
             <Plus aria-hidden="true" />
-            Add other
+            Add
+            {' '}
+            {kind}
           </button>
-        )}
+          {kind === 'inspection' && (
+            <button className={styles.add} onClick={() => { onAdd('other'); }} type="button">
+              <Plus aria-hidden="true" />
+              Add other
+            </button>
+          )}
+        </div>
       </div>
       {indexed.map(({ item, index }) => (
         <article className={styles.item} key={item.id}>
@@ -398,7 +400,7 @@ function ItemSection({ title, kind, items, onAdd, onChange, onRemove, onReorder,
               Item
               {index + 1}
             </strong>
-            <div>
+            <div className={styles.itemActions}>
               <button aria-label={`Move item ${String(index + 1)} up`} disabled={index === 0} onClick={() => { onReorder(index, -1); }} type="button"><ChevronUp aria-hidden="true" /></button>
               <button aria-label={`Move item ${String(index + 1)} down`} disabled={index === items.length - 1} onClick={() => { onReorder(index, 1); }} type="button"><ChevronDown aria-hidden="true" /></button>
               <button aria-label={`Remove item ${String(index + 1)}`} onClick={() => { onRemove(index); }} type="button"><Trash2 aria-hidden="true" /></button>
