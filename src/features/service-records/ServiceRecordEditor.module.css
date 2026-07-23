@@ -20,7 +20,9 @@
 .invalidField input, .invalidField select, .invalidField textarea { border-color: var(--color-warning); }
 .field textarea { min-height: var(--textarea-min-height); resize: vertical; }
 .item { background: var(--color-canvas-elevated); display: grid; gap: var(--space-xs); padding: var(--space-xs); }
-.itemHeader button { background: transparent; border: 0; color: var(--color-ink); min-height: var(--control-height); }
+.sectionActions, .itemActions { align-items: center; display: flex; flex-wrap: wrap; gap: var(--space-xxs); }
+.itemActions { justify-content: flex-end; }
+.itemHeader button { align-items: center; background: transparent; border: 0; color: var(--color-ink); display: inline-flex; height: var(--control-height); justify-content: center; padding: 0; width: var(--control-height); }
 .bounds, .error { color: var(--color-body); margin: 0; max-width: var(--copy-max-width); }
 .error { border-left: var(--nav-active-border-width) solid var(--color-warning); color: var(--color-warning); padding-left: var(--space-xs); }
 .total { font-size: var(--font-size-title-md); font-weight: var(--font-weight-bold); }
@@ -29,4 +31,4 @@
 .delete { margin-right: auto; }
 .save:disabled, .delete:disabled { cursor: not-allowed; opacity: .6; }
 button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: var(--focus-ring-width) solid var(--color-focus); outline-offset: var(--focus-ring-offset); }
-@media (max-width: 39.99rem) { .page { padding: var(--space-sm); } .header, .identity, .actions { align-items: stretch; display: grid; } .grid { grid-template-columns: minmax(0, 1fr); } .back, .save { justify-content: center; } .delete { margin-right: 0; } .itemHeader { align-items: start; } .dateControl { align-items: stretch; flex-direction: column; } }
+@media (max-width: 39.99rem) { .page { padding: var(--space-sm); } .header, .identity, .actions { align-items: stretch; display: grid; } .sectionHeader { align-items: stretch; flex-direction: column; } .sectionActions { justify-content: stretch; } .sectionActions .add { flex: 1 1 10rem; justify-content: center; } .grid { grid-template-columns: minmax(0, 1fr); } .back, .save { justify-content: center; } .delete { margin-right: 0; } .itemHeader { align-items: start; } .itemActions { gap: var(--space-xxs); } .dateControl { align-items: stretch; flex-direction: column; } }

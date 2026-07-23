@@ -137,7 +137,7 @@ function DraftReview({ record }: { readonly record: ServiceRecord }) {
         <label className={styles.confirm}>
           <input checked={completeRecord} onChange={(event) => { setCompleteRecord(event.target.checked); }} type="checkbox" />
           {' '}
-          I understand this Service Record will become read-only and cannot be changed.
+          I have reviewed these details and understand this Service Record will become read-only.
         </label>
         {!eligibility.valid && <p className={styles.error} role="alert">Add a summary or at least one item before reviewing completion.</p>}
         {errorMessage(complete.error) !== undefined && <p role="alert">{errorMessage(complete.error)}</p>}

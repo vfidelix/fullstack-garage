@@ -161,6 +161,24 @@ describe('ServiceRecordEditor', () => {
     expect(screen.getByLabelText('Item 2 name')).toBeVisible();
   });
 
+  it('keeps labelled item controls operable after reordering and removing an item', async () => {
+    const user = userEvent.setup();
+    renderEditor();
+
+    await screen.findByRole('heading', { name: 'Edit Service Record' });
+    await user.click(screen.getByRole('button', { name: 'Add work' }));
+    await user.type(screen.getByLabelText('Item 1 name'), 'Inspect brakes');
+    await user.click(screen.getByRole('button', { name: 'Add work' }));
+    await user.type(screen.getByLabelText('Item 2 name'), 'Road test');
+
+    await user.click(screen.getByRole('button', { name: 'Move item 2 up' }));
+    expect(screen.getByLabelText('Item 1 name')).toHaveValue('Road test');
+    expect(screen.getByRole('button', { name: 'Remove item 2' })).toBeEnabled();
+
+    await user.click(screen.getByRole('button', { name: 'Remove item 2' }));
+    expect(screen.queryByLabelText('Item 2 name')).not.toBeInTheDocument();
+  });
+
   it('adds and focuses a same-section item when Enter is pressed in an item field', async () => {
     const user = userEvent.setup();
     const { saveServiceRecordDraft } = renderEditor();

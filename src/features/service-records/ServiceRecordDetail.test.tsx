@@ -38,7 +38,7 @@ function operations(record: ServiceRecord): ServiceRecordOperations {
   return {
     completeServiceRecord: vi.fn(() => Promise.resolve({ ok: true, value: completed } as const)),
     createServiceRecordDraft: vi.fn(), createServiceRecordSnapshot: vi.fn(), deleteServiceRecordDraft: vi.fn(),
-    downloadServiceRecordPdf: vi.fn(), getServiceRecord: vi.fn(() => Promise.resolve({ ok: true, value: record } as const)),
+    downloadServiceRecordPdf: vi.fn(() => Promise.resolve({ ok: true, value: { snapshot, pdf: new Blob(['download']) } } as const)), getServiceRecord: vi.fn(() => Promise.resolve({ ok: true, value: record } as const)),
     listServiceRecordsForVehicle: vi.fn(), previewServiceRecordPdf: vi.fn(() => Promise.resolve({ ok: true, value: { snapshot, pdf: new Blob(['fresh']) } } as const)), saveServiceRecordDraft: vi.fn(),
     listServiceRecordSnapshots: vi.fn(() => Promise.resolve({ ok: true, value: [{ id: snapshot.id, serviceRecordId: completed.id, displayNumber: 'SR-000001', serviceRecordVersion: 2, schemaVersion: 1, templateVersion: 1, brandingVersion: 1, generatedAt: snapshot.generatedAt }] } as const)),
     previewHistoricalServiceRecordPdf: vi.fn(() => Promise.resolve({ ok: true, value: { snapshot, pdf: new Blob(['historical']) } } as const)),
@@ -89,7 +89,7 @@ describe('ServiceRecordDetail', () => {
 
     expect(await screen.findByRole('heading', { name: 'Completion review' })).toBeVisible();
     expect(screen.getByRole('button', { name: 'Complete Service Record' })).toBeDisabled();
-    await user.click(screen.getByRole('checkbox', { name: 'I understand this Service Record will become read-only and cannot be changed.' }));
+    await user.click(screen.getByRole('checkbox', { name: 'I have reviewed these details and understand this Service Record will become read-only.' }));
     await user.click(screen.getByRole('button', { name: 'Complete Service Record' }));
     expect(serviceRecordOperations.completeServiceRecord).toHaveBeenCalledWith('record-1', 1);
   });
@@ -107,14 +107,18 @@ describe('ServiceRecordDetail', () => {
   it('keeps fresh exports separate from an explicitly selected historical export', async () => {
     const user = userEvent.setup();
     vi.stubGlobal('URL', { createObjectURL: vi.fn(() => 'blob:preview'), revokeObjectURL: vi.fn() });
+    const anchorClick = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
     const serviceRecordOperations = renderDetail(completed);
 
     await screen.findByRole('heading', { name: 'PDF export' });
     await user.click(screen.getByRole('button', { name: 'Preview fresh PDF' }));
     expect(serviceRecordOperations.previewServiceRecordPdf).toHaveBeenCalledWith('record-1');
     expect(await screen.findByTitle('Service Record PDF preview')).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Download fresh PDF' }));
+    expect(serviceRecordOperations.downloadServiceRecordPdf).toHaveBeenCalledWith('record-1');
     await user.click(screen.getByRole('button', { name: 'Preview this historical export' }));
     expect(serviceRecordOperations.previewHistoricalServiceRecordPdf).toHaveBeenCalledWith('record-1', 'snapshot-1');
+    anchorClick.mockRestore();
     vi.unstubAllGlobals();
   });
 });

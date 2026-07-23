@@ -1,7 +1,7 @@
 # Service Records Controlled Task Breakdown
 
 Status: Approved for implementation
-Plan revision: SR-PLAN-002
+Plan revision: SR-PLAN-003
 Last updated: 2026-07-23
 Source: [Service Record Feature](service-records.md)
 Architecture: [Fullstack Garage Architecture](../architecture/fullstack-garage-architecture.md)
@@ -16,10 +16,13 @@ specification remains the authoritative source for product behavior.
 
 The planning baseline began as **Awaiting explicit approval**. SR-PLAN-001 was
 approved for the initial implementation. SR-PLAN-002 records the product owner's
-Service Record flow review and adds SR-15 without claiming implementation. Scope,
-dependencies, and acceptance criteria below are frozen under SR-PLAN-002. Any
-change to one of them requires a new plan revision and renewed approval; progress,
-observed validation outcomes, and finding dispositions do not.
+Service Record flow review and adds SR-15 without claiming implementation.
+SR-PLAN-003 adds the narrowly scoped mobile-workflow remediation below. It was
+approved on 2026-07-23 and authorizes the recorded implementation tasks.
+Scope, dependencies, and acceptance criteria below are frozen under the approved
+revision and, once approved, SR-PLAN-003. Any change to one of them requires a
+new plan revision and renewed approval; progress, observed validation outcomes,
+and finding dispositions do not.
 
 ### Approval record
 
@@ -27,12 +30,33 @@ observed validation outcomes, and finding dispositions do not.
 | --- | --- | --- | --- |
 | 2026-07-22 | SR-PLAN-001 | SR-01 through SR-14 | “Implement the plan in a fresh context. Treat the plan as the source of user intent, re-read files as needed, and carry the work through implementation and verification.” |
 | 2026-07-23 | SR-PLAN-002 | Documentation update and SR-15 scope | “Update the feature documents related now. Do not touch the code.” |
+| 2026-07-23 | SR-PLAN-003 | SR-16 through SR-20 | “approved. implement it” |
 
 No product ambiguity remains for the recorded scope: `service-records.md` is
 decision-complete; jsPDF, the existing transparent Fullstack Garage logo,
 schema/template/branding versions beginning at `1`, and the SR-15 interaction and
 validation requirements are approved implementation constraints. SR-15 remains
 planned because this revision authorizes documentation only.
+
+### SR-PLAN-003 scope and operating assumptions
+
+- The remediation covers the authenticated Vehicle Service History entry point,
+  draft editor, completion review, completed-record detail, PDF-export controls,
+  and historical-export list. It does not alter Service Record domain rules,
+  persistence, routes, exports, or product language.
+- A narrow viewport means 320 px, 360 px, and 390 px CSS widths in portrait;
+  768 px represents a tablet-width layout; 1280 px represents the existing web
+  layout. The implementation must work without horizontal page scrolling at each
+  width. Keyboard zoom and browser text scaling must not hide a primary action.
+- The current request supplies no device, browser, or exact reproduction steps.
+  The plan therefore uses the above representative viewport matrix and current
+  responsive requirements in `service-records.md`. Any device-specific defect
+  found during execution is recorded as a finding; it does not silently expand
+  the approved scope.
+- Existing desktop behavior is a non-negotiable regression boundary. Desktop
+  controls may be repositioned only when their labels, keyboard access, route
+  behavior, save/complete/export semantics, and Ferrari design tokens remain
+  intact.
 
 ## 2. Baseline and Delivery Boundaries
 
@@ -88,6 +112,11 @@ complete before adapters, archive/delete messaging, and final verification.
 | SR-12 | Build completion review, read-only detail, PDF preview/download, and historical-export UI. | SR-08, SR-09, SR-10, SR-11 | Completed | Completion/PDF/history/a11y workflow tests. | Passed 2026-07-22: `npm test -- src/features/service-records/ServiceRecordDetail.test.tsx src/features/service-records/ServiceRecordRoutes.test.tsx src/features/service-records/ServiceRecordEditor.test.tsx` (6 tests); `npm run typecheck`; focused ESLint for SR-12 touched TypeScript files; `git diff --check`. Completion requires explicit confirmation, completed records are read-only, fresh preview/download remain separate from explicitly selected historical exports, and download persists snapshots through the existing app-owned workflow without persisting PDF Blobs. |
 | SR-13 | Complete Vehicle archive/delete messaging and feature documentation/progress readiness. | SR-04, SR-10, SR-12 | Completed | Vehicle lifecycle UI/documentation review; focused regressions. | Passed 2026-07-22: `npm test -- src/application/vehicles/vehicleResult.test.ts src/infrastructure/supabase/repositories/mapVehicleError.test.ts src/infrastructure/supabase/repositories/SupabaseVehicleRepository.test.ts src/features/vehicles/VehicleWorkflowScreens.test.tsx` (77 tests); `npm run typecheck`; focused ESLint for all SR-13 files; `git diff --check`. The Vehicle UI now explains that archive removes drafts while retaining completed Service Records, offers archive after a history-blocked permanent delete, and explains a completed-history odometer-unit conflict without provider details. |
 | SR-15 | Refine Service Record draft validation, editor interactions, and completion flow from the product-owner review. | SR-04, SR-11, SR-12, SR-13 | Planned | Focused persistence/editor/detail tests; accessibility and responsive checks; typecheck; lint; build. | Unset; documentation-only review approved on 2026-07-23 and no code changed. |
+| SR-16 | Establish the reproducible mobile and desktop workflow baseline and translate the approved findings into component-level acceptance checks. | SR-15 | Completed | Read-only route/component inspection; run the existing focused Service Record tests; record viewport/browser observations without changing production code. | Passed 2026-07-23: source inspection confirms the editor, detail/export, and history switch to one-column/grid layouts below 640 px and retain their multi-column/flex layouts at 768/1280 px. Focused UI/workflow suite passed (4 files, 53 tests). No installed browser executable was available, so the 320/360/390/768/1280 px visual matrix remains required in SR-19/SR-20. Findings SRF-16-001 through SRF-16-003 record the actionable mobile gaps. |
+| SR-17 | Make the draft editor smooth and operable on narrow screens while preserving its desktop layout and all draft semantics. | SR-16 | Completed | Editor interaction, keyboard/focus, accessibility, and visual checks at 320/360/390/768/1280 px; typecheck; lint. | Passed 2026-07-23: editor test suite (8 tests) verifies add, reorder, remove, labelled control access, validation, save, and Enter-key focus behavior; `npm run typecheck`; `npm run lint -- src/features/service-records/ServiceRecordEditor.tsx src/features/service-records/ServiceRecordEditor.test.tsx`; `git diff --check`. Source inspection confirms 48 px square reorder/remove controls and mobile-stacked section actions below 640 px, with desktop flex layout retained. Browser visual checks remain unavailable because no browser executable is installed. |
+| SR-18 | Make completion review, completed-record detail, PDF controls, and Service History readable and operable on narrow screens while preserving desktop behavior. | SR-16 | Completed | Detail/history/export interaction and accessibility checks at 320/360/390/768/1280 px; typecheck; lint. | Passed 2026-07-23: focused detail workflow suite (5 tests), `npm run typecheck`, focused TypeScript ESLint, and `git diff --check`. The acknowledgement now has a 24 px checkbox inside a 48 px labelled target; preview, historical, and retry actions use the 48 px control token; mobile error/history rows stack and long snapshot content wraps. Static inspection confirms the 640 px one-column layout and retained desktop flex/grid layouts. Browser visual checks remain unavailable because no browser executable is installed. |
+| SR-19 | Add deterministic regression coverage for the approved mobile layout and touch-target behavior, plus desktop workflow preservation. | SR-17, SR-18 | Completed | Focused component tests and an available-browser/manual viewport matrix covering create, save, complete, preview/download, historical export, and history navigation. | Passed 2026-07-23: `npm test -- src/features/service-records/ServiceRecordResponsiveStyles.test.mjs src/features/service-records/ServiceRecordEditor.test.tsx src/features/service-records/ServiceRecordDetail.test.tsx src/features/service-records/ServiceRecordRoutes.test.tsx` (20 tests). The CSS contract suite protects the shared 48 px control token, narrow editor/detail/history stacking, and desktop grid/flex declarations; workflow tests cover create/save, explicit completion, fresh preview/download, deliberate historical export, and Service History navigation. No browser executable is installed, so the visual 320/360/390/768/1280 px matrix remains required in SR-20. |
+| SR-20 | Run final mobile and web verification, record only observed outcomes, and obtain an independent read-only feature review. | SR-19 | Completed | `npm test`, `npm run typecheck`, `npm run lint`, `npm run build`, `git diff --check`, viewport matrix, and reviewer findings disposition. | Gates passed 2026-07-23: `npm test`; `npm run typecheck`; `npm run lint`; `npm run build`; and `git diff --check`. The build created production artifacts but emitted a sandbox-only Wrangler diagnostic because its default log path under `~/.config/.wrangler/logs` is read-only; it also reported the pre-existing 500 kB client-chunk advisory. Source/privacy/provider scan found no Service Record UI-layer Supabase imports, service-role references, console logging, or billing-language terms; private fields remain rendered only as feature data and are not logged. Review finding SRF-20-001 was fixed and a fresh independent review reported no actionable findings. No `chromium`, `chromium-browser`, `google-chrome`, `google-chrome-stable`, or `firefox` executable is installed, so the 320/360/390/768/1280 px visual matrix is unavailable and not claimed as passed. |
 | SR-14 | Run full verification and record only actually observed residuals. | SR-05, SR-07, SR-11, SR-12, SR-13, SR-15 | Planned | All final gates in Section 6. | Unset. |
 
 ## 5. Frozen Task Contracts
@@ -251,6 +280,27 @@ complete before adapters, archive/delete messaging, and final verification.
   action; exact dollar-to-minor-unit conversion and Australian formatting; and
   keyboard, screen-reader labelling, hit-area, desktop, and narrow-layout behavior.
 
+### SR-16 — Mobile and desktop baseline
+
+- **Observed source baseline:** At 320, 360, and 390 px, the editor's field grid,
+  date controls, page header, identity strip, and save/delete actions collapse to
+  one-column layouts; the detail view similarly stacks record fields, header
+  actions, export actions, item rows, and historical-export rows. Vehicle Service
+  History stacks its header and record metadata. At 768 and 1280 px, the narrow
+  breakpoint does not apply, retaining the two-column editor grid, three-column
+  detail grid, and inline desktop actions. The global 20rem minimum width matches
+  the 320 px lower-bound viewport.
+- **Acceptance checks for follow-up:** SR-17 must preserve the above breakpoints,
+  ensure every editor action (especially item reorder/remove) has a 44 by 44 px
+  touch target, and demonstrate create, item add/reorder/remove, save, validation,
+  and keyboard focus at every required viewport. SR-18 must give the completion
+  acknowledgement a 24 by 24 px checkbox and 44 by 44 px labelled target, make
+  every export/history retry action at least 44 by 44 px, and prevent narrow
+  export error rows from overflowing. SR-19/SR-20 must exercise the complete
+  320/360/390/768/1280 px browser matrix because this environment has no browser
+  executable available for visual observation.
+- **Validation:** `npm test -- src/features/service-records/ServiceRecordEditor.test.tsx src/features/service-records/ServiceRecordDetail.test.tsx src/features/service-records/ServiceRecordRoutes.test.tsx src/features/vehicles/VehicleWorkflowScreens.test.tsx` passed on 2026-07-23 (4 files, 53 tests). Static responsive inspection covered the editor, completion/detail/export, and Service History CSS modules. `chromium`, `chromium-browser`, and `google-chrome` were unavailable; no visual claim is made for the required viewport matrix.
+
 ### SR-14 — Final verification
 
 - **Acceptance:** Run the full gates, resolve in-scope failures, record exact
@@ -275,10 +325,14 @@ a new plan revision and approval.
 | SRF-15-005 | Medium | The completion confirmation checkbox and wording are not visually prominent enough for an irreversible action. | Resolved | SR-15 | Completion review requires the read-only acknowledgement and eligibility. |
 | SRF-15-006 | High | A known invalid odometer can be persisted and is first rejected on completion review with a generic message. | Resolved | SR-15 | Application and pgTAP checks reject known conflicts; 172 database tests pass. |
 | SRF-15-007 | Medium | Purchase Cost input exposes raw AUD cents instead of standard Australian dollar entry and formatting. | Resolved | SR-15 | Editor accepts dollars and retains minor-unit persistence; editor tests pass. |
+| SRF-16-001 | Medium | Editor item move-up, move-down, and remove controls declare only a minimum height; their icon-only width can remain below the required 44 px touch target on narrow screens. | Resolved | SR-17 | Passed 2026-07-23: the controls now use explicit 48 px height and width from `--control-height`; editor interaction tests preserve labelled reorder/remove behavior. Browser viewport observation remains unavailable. |
+| SRF-16-002 | High | The irreversible completion acknowledgement uses unsized browser-default checkbox and label dimensions, so it does not meet the specified 24 by 24 px checkbox and 44 by 44 px labelled hit area. | Resolved | SR-18 | Passed 2026-07-23: the checkbox is explicitly 24 by 24 px and its accessible label has the 48 px shared control minimum; existing keyboard-operable completion workflow test passes. Browser viewport observation remains unavailable. |
+| SRF-16-003 | Medium | Historical-export preview is explicitly 40 px high and the historical-export retry error remains a non-wrapping flex row, leaving touch-target and overflow risks at 320 px. | Resolved | SR-18 | Passed 2026-07-23: historical preview and retry actions now use the 48 px control token; error content wraps on desktop and stacks on narrow screens, while snapshot content can break long strings. Focused export workflow test passes. Browser viewport observation remains unavailable. |
+| SRF-20-001 | Medium | The completion acknowledgement does not use the exact product-required wording. | Resolved | SRF-20-001-FIX | Passed 2026-07-23: `ServiceRecordDetail` and its accessibility-name assertion now use `I have reviewed these details and understand this Service Record will become read-only.`; focused detail tests, `npm run typecheck`, `npm run lint`, and `git diff --check` pass. |
 
 ## 7. Completion Conditions
 
-SR-PLAN-002 is complete only when SR-01 through SR-15 are completed with
+SR-PLAN-003 is complete only when SR-01 through SR-20 are completed with
 observed validation outcomes, the latest review has no actionable findings, and
 any unavailable environment-dependent validation is explicitly identified as a
 residual rather than represented as passed.
