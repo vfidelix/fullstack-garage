@@ -10,6 +10,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { AuthenticationResult } from '../../application/authentication/authenticationModels';
 import type { AuthGateway } from '../../application/ports/authGateway';
 import type { AuthenticationSessionEvents } from '../../application/ports/authenticationSessionEvents';
+import type { AuthenticationSessionEvent } from '../../application/ports/authenticationSessionEvents';
 import { AuthenticationController } from '../../application/use-cases/auth/authenticationController';
 import type { AppUser } from '../../domain/users/appUser';
 import { AuthenticationProvider } from './AuthenticationProvider';
@@ -54,20 +55,20 @@ function createGateway(overrides: Partial<AuthGateway> = {}) {
 }
 
 function createSessionEvents(): {
-  readonly emit: () => void;
+  readonly emit: (event?: AuthenticationSessionEvent) => void;
   readonly events: AuthenticationSessionEvents;
   readonly subscribe: ReturnType<typeof vi.fn>;
   readonly unsubscribe: ReturnType<typeof vi.fn>;
 } {
-  let listener: (() => void) | undefined;
+  let listener: ((event: AuthenticationSessionEvent) => void) | undefined;
   const unsubscribe = vi.fn();
-  const subscribe = vi.fn((nextListener: () => void) => {
+  const subscribe = vi.fn((nextListener: (event: AuthenticationSessionEvent) => void) => {
     listener = nextListener;
     return unsubscribe;
   });
 
   return {
-    emit: () => listener?.(),
+    emit: (event = { type: 'session_changed' }) => listener?.(event),
     events: { subscribe },
     subscribe,
     unsubscribe,
@@ -102,7 +103,11 @@ function AuthenticationProbe() {
   );
 }
 
-function PrivateStateCleanupProbe({ cleanup }: { readonly cleanup: () => void }) {
+function PrivateStateCleanupProbe({
+  cleanup,
+}: {
+  readonly cleanup: () => void | Promise<void>;
+}) {
   usePrivateStateCleanup(cleanup);
 
   return null;
@@ -190,6 +195,126 @@ describe('AuthenticationProvider', () => {
       expect(restore).toHaveBeenCalledTimes(2);
       expect(screen.getByLabelText('authentication status')).toHaveTextContent('unauthenticated');
     });
+  });
+
+  it('retains authenticated content through a session event and browser refocus', async () => {
+    const reconciliation = createDeferred<AuthenticationResult>();
+    const restore = vi.fn()
+      .mockResolvedValueOnce({ status: 'authenticated', user: appUser })
+      .mockImplementationOnce(() => reconciliation.promise)
+      .mockResolvedValueOnce({ status: 'authenticated', user: appUser });
+    const controller = new AuthenticationController(createGateway({ restore }));
+    const { emit, events } = createSessionEvents();
+    render(
+      <AuthenticationProvider controller={controller} sessionEvents={events}>
+        <AuthenticationProbe />
+      </AuthenticationProvider>,
+    );
+    await waitFor(() => {
+      expect(screen.getByLabelText('authentication status')).toHaveTextContent('authenticated');
+    });
+
+    act(() => {
+      emit({ type: 'session_changed' });
+    });
+    expect(screen.getByLabelText('authentication status')).toHaveTextContent('authenticated');
+    reconciliation.resolve({ status: 'authenticated', user: appUser });
+    await waitFor(() => {
+      expect(restore).toHaveBeenCalledTimes(2);
+    });
+
+    act(() => {
+      window.dispatchEvent(new Event('focus'));
+    });
+    await waitFor(() => {
+      expect(restore).toHaveBeenCalledTimes(3);
+    });
+    expect(screen.getByLabelText('authentication status')).toHaveTextContent('authenticated');
+  });
+
+  it('fails closed immediately on an access-lost event without waiting for restoration', async () => {
+    const delayedRestore = createDeferred<AuthenticationResult>();
+    const cleanup = vi.fn();
+    const restore = vi.fn()
+      .mockResolvedValueOnce({ status: 'authenticated', user: appUser })
+      .mockImplementationOnce(() => delayedRestore.promise);
+    const controller = new AuthenticationController(createGateway({ restore }));
+    const { emit, events } = createSessionEvents();
+    render(
+      <AuthenticationProvider controller={controller} sessionEvents={events}>
+        <AuthenticationProbe />
+        <PrivateStateCleanupProbe cleanup={cleanup} />
+      </AuthenticationProvider>,
+    );
+    await waitFor(() => {
+      expect(screen.getByLabelText('authentication status')).toHaveTextContent('authenticated');
+    });
+
+    act(() => {
+      emit({ type: 'session_changed' });
+    });
+    expect(restore).toHaveBeenCalledTimes(2);
+
+    act(() => {
+      emit({ type: 'access_lost' });
+    });
+
+    await waitFor(() => {
+      expect(cleanup).toHaveBeenCalledOnce();
+      expect(screen.getByLabelText('authentication status')).toHaveTextContent('unauthenticated');
+    });
+    expect(restore).toHaveBeenCalledTimes(2);
+
+    delayedRestore.resolve({ status: 'authenticated', user: appUser });
+    await act(async () => {
+      await delayedRestore.promise;
+    });
+    expect(screen.getByLabelText('authentication status')).toHaveTextContent('unauthenticated');
+  });
+
+  it('does not let focus or session reconciliation restore access after access loss', async () => {
+    const delayedRestore = createDeferred<AuthenticationResult>();
+    const delayedCleanup = createDeferred<undefined>();
+    const cleanup = vi.fn(() => delayedCleanup.promise);
+    const restore = vi.fn()
+      .mockResolvedValueOnce({ status: 'authenticated', user: appUser })
+      .mockImplementationOnce(() => delayedRestore.promise);
+    const controller = new AuthenticationController(createGateway({ restore }));
+    const { emit, events } = createSessionEvents();
+    render(
+      <AuthenticationProvider controller={controller} sessionEvents={events}>
+        <AuthenticationProbe />
+        <PrivateStateCleanupProbe cleanup={cleanup} />
+      </AuthenticationProvider>,
+    );
+    await waitFor(() => {
+      expect(screen.getByLabelText('authentication status')).toHaveTextContent('authenticated');
+    });
+
+    act(() => {
+      emit({ type: 'session_changed' });
+      emit({ type: 'access_lost' });
+    });
+    await waitFor(() => {
+      expect(cleanup).toHaveBeenCalledOnce();
+    });
+
+    act(() => {
+      emit({ type: 'session_changed' });
+      window.dispatchEvent(new Event('focus'));
+    });
+
+    expect(restore).toHaveBeenCalledTimes(2);
+    delayedCleanup.resolve(undefined);
+    await waitFor(() => {
+      expect(screen.getByLabelText('authentication status')).toHaveTextContent('unauthenticated');
+    });
+
+    delayedRestore.resolve({ status: 'authenticated', user: appUser });
+    await act(async () => {
+      await delayedRestore.promise;
+    });
+    expect(screen.getByLabelText('authentication status')).toHaveTextContent('unauthenticated');
   });
 
   it('lets a session event supersede a pending startup restore', async () => {

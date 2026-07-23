@@ -6,7 +6,10 @@ import {
   type ReactNode,
 } from 'react';
 import type { AuthenticationController } from '../../application/use-cases/auth/authenticationController';
-import type { AuthenticationSessionEvents } from '../../application/ports/authenticationSessionEvents';
+import type {
+  AuthenticationSessionEvent,
+  AuthenticationSessionEvents,
+} from '../../application/ports/authenticationSessionEvents';
 import {
   getAuthenticationController,
   getAuthenticationSessionEvents,
@@ -67,9 +70,24 @@ export function AuthenticationProvider({
   useEffect(() => {
     restoreAtStartup(controller);
 
-    return sessionEvents.subscribe(() => {
-      void controller.restoreAuthentication();
-    });
+    const reconcile = () => {
+      void controller.reconcileAuthentication();
+    };
+    const handleSessionEvent = (event: AuthenticationSessionEvent) => {
+      if (event.type === 'access_lost') {
+        void controller.handleAccessLost();
+        return;
+      }
+
+      reconcile();
+    };
+    const stopSessionEvents = sessionEvents.subscribe(handleSessionEvent);
+    window.addEventListener('focus', reconcile);
+
+    return () => {
+      stopSessionEvents();
+      window.removeEventListener('focus', reconcile);
+    };
   }, [controller, sessionEvents]);
 
   const value = useMemo<AuthenticationContextValue>(() => ({

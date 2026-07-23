@@ -48,6 +48,10 @@ Vehicles and Service Records that user may access.
 14. Custom API migration compatibility is an MVP design constraint, but the
     custom API and its authentication adapter are not part of this feature's
     Definition of Done.
+15. Background session reconciliation for an already authenticated user must
+    keep protected workflows mounted while the same application user remains
+    authorized. Token refresh and browser refocus must not discard unsaved
+    Vehicle or Service Record input.
 
 ## 3. MVP Scope
 
@@ -170,6 +174,15 @@ export type AuthenticationState =
   after successful authentication.
 - Authentication state changes must have one application-level owner rather than
   independent route or feature listeners.
+- The full-page `initializing` state is limited to startup, authentication
+  callback completion, and other flows where no authenticated application user
+  has yet been established.
+- Background session reconciliation must preserve the current authenticated
+  state and mounted protected route while the same application user is being
+  revalidated.
+- A confirmed sign-out, expired or revoked session, unauthorized result, or
+  application-user identity change must still leave the authenticated state and
+  clear private state as required.
 
 The MVP uses the Supabase session defaults:
 
@@ -206,7 +219,12 @@ identity that has no Fullstack Garage access. Token refresh, browser storage,
 cookies, provider callbacks, and session-change events are adapter details. The
 application authentication controller owns state transitions and calls
 `restore()` after startup, authentication callbacks, and recoverable session
-failures.
+failures. It must distinguish initial restoration from background session
+reconciliation so a routine provider event does not replace an established
+authenticated state with the full-page initialization state. Infrastructure may
+classify provider events, but the application layer owns whether an event
+requires background reconciliation, immediate sign-out, or another state
+transition.
 
 For the MVP, a mapped application user is authorized only when its app-owned role
 is `admin`. A mapped non-admin identity produces the `unauthorized` result.
@@ -377,6 +395,9 @@ codes, tokens, callback parameters, or provider payloads.
   shown in the MVP.
 - A full-page initialization state prevents protected content from flashing
   before session restoration completes.
+- Routine token refresh, browser refocus, and same-user background session
+  reconciliation keep the authenticated shell and active protected workflow
+  mounted so unsaved form input is preserved.
 - Cancelled sign-in returns to a usable sign-in screen.
 - Unauthorized identities see an access-unavailable message and a sign-out
   action.
@@ -414,6 +435,10 @@ Unit tests should cover:
 - Protected-route decisions.
 - Safe local return-path validation.
 - App-owned error mapping.
+- Background reconciliation that retains the authenticated state for the same
+  application user without publishing an intermediate `initializing` state.
+- Background reconciliation that transitions safely on sign-out, session
+  expiry, authorization loss, or application-user identity change.
 
 Adapter and integration tests should cover:
 
@@ -423,6 +448,8 @@ Adapter and integration tests should cover:
 - Sign-out and private-cache cleanup.
 - Rejected access for an unmapped identity.
 - Environment-specific callback configuration.
+- Provider token-refresh and browser-refocus events without protected-route
+  unmounting or loss of unsaved Vehicle and Service Record input.
 
 Define the `AuthGateway` behavior once as a shared contract suite. The
 `SupabaseAuthGateway` must pass it for the MVP. A future `HttpAuthGateway` must
@@ -437,14 +464,19 @@ RLS integration tests must exercise:
 - Rejected browser role escalation.
 
 A staging smoke test should complete the real Google redirect, restore the
-session after a page refresh, enter a deep-linked protected route, and sign out.
-Automated tests must not depend on a developer's personal Google account.
+session after a page refresh, enter a deep-linked protected route, preserve
+partially entered Vehicle or Service Record data across browser refocus and
+token refresh, and sign out. Automated tests must not depend on a developer's
+personal Google account.
 
 ## 17. Acceptance Criteria
 
 - The initial Garage Admin can sign in with Google and reach protected routes.
 - Refreshing the SPA preserves a valid session without exposing protected content
   during initialization.
+- Token refresh, browser refocus, and same-user background reconciliation do not
+  unmount the active protected workflow or discard unsaved Vehicle or Service
+  Record input.
 - The application resolves an app-owned user and role before loading private
   feature data.
 - The initial application display name is copied from Google and is not silently
@@ -568,6 +600,7 @@ unchanged so the decision history is preserved.
 | 2026-07-19 | Approved update | Product owner | Added custom API migration guardrails while keeping future adapters, backend implementation, and identity cutover outside the MVP Definition of Done. |
 | 2026-07-19 | Approved update | Product owner | Limited MVP access to the Garage Admin and deferred member provisioning and member-specific behavior. |
 | 2026-07-20 | Approved update | Product owner | Resolved sole-admin recovery with an authorized two-person atomic identity-mapping replacement that preserves the admin AppUserId and retains the old auth row unmapped for audit. |
+| 2026-07-23 | Approved update | Product owner | Required same-user background session reconciliation to preserve mounted protected workflows and unsaved Vehicle or Service Record input while retaining fail-closed transitions for sign-out, expiry, authorization loss, and identity changes. |
 
 ## 21. Primary References
 

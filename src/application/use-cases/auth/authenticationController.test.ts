@@ -85,6 +85,25 @@ describe('AuthenticationController', () => {
     expect(controller.getCurrentAppUser()).toBe(appUser);
   });
 
+  it('keeps an authenticated same user visible while background reconciliation is pending', async () => {
+    const reconciliation = createDeferred<AuthenticationResult>();
+    const controller = new AuthenticationController(createGateway({
+      restore: (() => {
+        let calls = 0;
+        return () => (++calls === 1
+          ? Promise.resolve({ status: 'authenticated', user: appUser })
+          : reconciliation.promise);
+      })(),
+    }));
+    await controller.restoreAuthentication();
+
+    const result = controller.reconcileAuthentication();
+
+    expect(controller.state).toEqual({ status: 'authenticated', user: appUser });
+    reconciliation.resolve({ status: 'authenticated', user: appUser });
+    await expect(result).resolves.toEqual({ status: 'authenticated', user: appUser });
+  });
+
   it('validates the return path before starting Google sign-in', async () => {
     let receivedReturnPath: string | undefined;
     const controller = new AuthenticationController(createGateway({

@@ -50,6 +50,7 @@ export class AuthenticationController {
   private operationGeneration = 0;
   private privateStateCleanupBarrier: Promise<void> = Promise.resolve();
   private privateStateOwnerId: AppUserId | null = null;
+  private backgroundReconciliationBlocked = false;
 
   public constructor(
     private readonly gateway: AuthGateway,
@@ -78,7 +79,40 @@ export class AuthenticationController {
     return this.restore('unexpected');
   }
 
+  /**
+   * Revalidates an established session without replacing its protected UI while
+   * the provider refreshes credentials. Any confirmed loss of access still
+   * follows the normal fail-closed commit path.
+   */
+  public async reconcileAuthentication(): Promise<AuthenticationState> {
+    return this.restore('unexpected', true);
+  }
+
+  /**
+   * Immediately removes protected access after a provider has confirmed the
+   * current session is gone. This invalidates any in-flight restoration before
+   * releasing user-owned state, so an older result cannot restore access.
+   */
+  public async handleAccessLost(): Promise<AuthenticationState> {
+    this.blockBackgroundReconciliation();
+    const operation = this.beginOperation();
+    const cleanup = this.releasePrivateStateOwner();
+
+    if (this.isCurrentOperation(operation)) {
+      this.setState({ status: 'unauthenticated' });
+    }
+
+    await cleanup;
+
+    if (this.isCurrentOperation(operation)) {
+      await this.commitState(operation, { status: 'unauthenticated' });
+    }
+
+    return this.currentState;
+  }
+
   public async signInWithGoogle(returnPath?: string): Promise<AuthenticationState> {
+    this.allowForegroundAuthenticationFlow();
     const operation = this.beginOperation();
 
     try {
@@ -106,6 +140,7 @@ export class AuthenticationController {
   }
 
   public async signOut(): Promise<AuthenticationState> {
+    this.blockBackgroundReconciliation();
     const operation = this.beginOperation();
     const cleanup = this.releasePrivateStateOwner();
     let gatewaySignOut: Promise<boolean>;
@@ -137,18 +172,35 @@ export class AuthenticationController {
 
   private async restore(
     fallbackCategory: AuthenticationErrorCategory,
+    isBackgroundReconciliation = false,
   ): Promise<AuthenticationState> {
-    const operation = this.beginOperation();
+    if (isBackgroundReconciliation && this.backgroundReconciliationBlocked) {
+      return this.currentState;
+    }
+
+    if (!isBackgroundReconciliation) {
+      this.allowForegroundAuthenticationFlow();
+    }
+
+    const preserveAuthenticatedState = isBackgroundReconciliation
+      && this.currentState.status === 'authenticated';
+    const operation = this.beginOperation(!preserveAuthenticatedState);
 
     try {
       const result: AuthenticationResult = await this.gateway.restore();
       if (this.isCurrentOperation(operation)) {
+        if (isBackgroundReconciliation && result.status !== 'authenticated') {
+          this.blockBackgroundReconciliation();
+        }
         await this.commitState(operation, result);
       }
     } catch (error: unknown) {
       if (this.isCurrentOperation(operation)) {
         const category = getErrorCategory(error);
 
+        if (isBackgroundReconciliation) {
+          this.blockBackgroundReconciliation();
+        }
         await this.commitState(operation, category === 'session_expired'
           ? { status: 'unauthenticated' }
           : {
@@ -161,10 +213,12 @@ export class AuthenticationController {
     return this.currentState;
   }
 
-  private beginOperation(): number {
+  private beginOperation(shouldInitialize = true): number {
     this.operationGeneration += 1;
     const operation = this.operationGeneration;
-    this.setState({ status: 'initializing' });
+    if (shouldInitialize) {
+      this.setState({ status: 'initializing' });
+    }
     return operation;
   }
 
@@ -178,21 +232,34 @@ export class AuthenticationController {
 
     const nextOwnerId = state.status === 'authenticated' ? state.user.id : null;
 
-    if (
-      this.privateStateOwnerId !== null
-      && this.privateStateOwnerId !== nextOwnerId
-    ) {
-      void this.releasePrivateStateOwner();
-    }
+    const ownerChanged = this.privateStateOwnerId !== null
+      && this.privateStateOwnerId !== nextOwnerId;
 
-    await this.privateStateCleanupBarrier;
+    if (ownerChanged) {
+      const cleanup = this.releasePrivateStateOwner();
 
-    if (!this.isCurrentOperation(operation)) {
-      return;
+      // A replacement owner must never inherit a mounted protected shell, and
+      // loss-of-access states must be visible before cleanup work can await.
+      // This preserves the old shell only for pending/successful same-user
+      // reconciliation while keeping every other result fail closed.
+      this.setState(nextOwnerId === null ? state : { status: 'initializing' });
+      await cleanup;
+
+      if (!this.isCurrentOperation(operation)) {
+        return;
+      }
+    } else {
+      await this.privateStateCleanupBarrier;
+
+      if (!this.isCurrentOperation(operation)) {
+        return;
+      }
     }
 
     this.privateStateOwnerId = nextOwnerId;
-    this.setState(state);
+    if (!ownerChanged || nextOwnerId !== null) {
+      this.setState(state);
+    }
   }
 
   private releasePrivateStateOwner(): Promise<void> {
@@ -214,5 +281,13 @@ export class AuthenticationController {
 
   private isCurrentOperation(operation: number): boolean {
     return operation === this.operationGeneration;
+  }
+
+  private allowForegroundAuthenticationFlow(): void {
+    this.backgroundReconciliationBlocked = false;
+  }
+
+  private blockBackgroundReconciliation(): void {
+    this.backgroundReconciliationBlocked = true;
   }
 }

@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createAuthenticationError } from '../../authentication/authenticationError';
+import {
+  createAuthenticationError,
+  type AuthenticationErrorCategory,
+} from '../../authentication/authenticationError';
 import type { AuthenticationResult } from '../../authentication/authenticationModels';
 import { PrivateStateCleanupRegistry } from '../../authentication/privateStateCleanupRegistry';
 import type { AuthGateway } from '../../ports/authGateway';
@@ -47,6 +50,12 @@ function createDeferred<T>(): {
   }
 
   return { promise, ...settlement };
+}
+
+function createCategorizedFailure(
+  category: AuthenticationErrorCategory,
+): Error & { readonly category: AuthenticationErrorCategory } {
+  return Object.assign(new Error('provider details'), { category });
 }
 
 describe('AuthenticationController private-state cleanup', () => {
@@ -104,6 +113,123 @@ describe('AuthenticationController private-state cleanup', () => {
     await expect(controller.restoreAuthentication()).resolves.toEqual(result);
 
     expect(cleanup).toHaveBeenCalledOnce();
+  });
+
+  it('clears user-owned state when background reconciliation finds an expired or revoked session', async () => {
+    const cleanup = vi.fn();
+    const restore = vi.fn()
+      .mockResolvedValueOnce({ status: 'authenticated', user: userA })
+      .mockRejectedValueOnce(createCategorizedFailure('session_expired'));
+    const controller = new AuthenticationController(createGateway({ restore }));
+    controller.registerPrivateStateCleanup(cleanup);
+    await controller.restoreAuthentication();
+
+    await expect(controller.reconcileAuthentication()).resolves.toEqual({
+      status: 'unauthenticated',
+    });
+
+    expect(cleanup).toHaveBeenCalledOnce();
+    expect(controller.getCurrentAppUser()).toBeNull();
+  });
+
+  it.each<AuthenticationResult>([
+    { status: 'unauthenticated' },
+    { status: 'unauthorized' },
+  ])('removes protected access before asynchronous cleanup when background reconciliation becomes $status', async (result) => {
+    const cleanupFinished = createDeferred<undefined>();
+    const cleanup = vi.fn(() => cleanupFinished.promise);
+    const restore = vi.fn()
+      .mockResolvedValueOnce({ status: 'authenticated', user: userA })
+      .mockResolvedValueOnce(result);
+    const controller = new AuthenticationController(createGateway({ restore }));
+    controller.registerPrivateStateCleanup(cleanup);
+    await controller.restoreAuthentication();
+
+    const reconciliation = controller.reconcileAuthentication();
+    await vi.waitFor(() => {
+      expect(cleanup).toHaveBeenCalledOnce();
+    });
+
+    expect(controller.state).toEqual(result);
+    expect(controller.getCurrentAppUser()).toBeNull();
+
+    cleanupFinished.resolve(undefined);
+    await expect(reconciliation).resolves.toEqual(result);
+  });
+
+  it('removes protected access before asynchronous cleanup when background reconciliation errors', async () => {
+    const cleanupFinished = createDeferred<undefined>();
+    const cleanup = vi.fn(() => cleanupFinished.promise);
+    const restore = vi.fn()
+      .mockResolvedValueOnce({ status: 'authenticated', user: userA })
+      .mockRejectedValueOnce(new Error('provider details'));
+    const controller = new AuthenticationController(createGateway({ restore }));
+    controller.registerPrivateStateCleanup(cleanup);
+    await controller.restoreAuthentication();
+
+    const reconciliation = controller.reconcileAuthentication();
+    await vi.waitFor(() => {
+      expect(cleanup).toHaveBeenCalledOnce();
+    });
+
+    expect(controller.state).toEqual({
+      status: 'error',
+      error: createAuthenticationError('unexpected'),
+    });
+    expect(controller.getCurrentAppUser()).toBeNull();
+
+    cleanupFinished.resolve(undefined);
+    await expect(reconciliation).resolves.toEqual({
+      status: 'error',
+      error: createAuthenticationError('unexpected'),
+    });
+  });
+
+  it('unmounts the old owner before asynchronous cleanup during background identity change', async () => {
+    const cleanupFinished = createDeferred<undefined>();
+    const cleanup = vi.fn(() => cleanupFinished.promise);
+    const restore = vi.fn()
+      .mockResolvedValueOnce({ status: 'authenticated', user: userA })
+      .mockResolvedValueOnce({ status: 'authenticated', user: userB });
+    const controller = new AuthenticationController(createGateway({ restore }));
+    controller.registerPrivateStateCleanup(cleanup);
+    await controller.restoreAuthentication();
+
+    const reconciliation = controller.reconcileAuthentication();
+    await vi.waitFor(() => {
+      expect(cleanup).toHaveBeenCalledOnce();
+    });
+
+    expect(controller.state).toEqual({ status: 'initializing' });
+    expect(controller.getCurrentAppUser()).toBeNull();
+
+    cleanupFinished.resolve(undefined);
+    await expect(reconciliation).resolves.toEqual({
+      status: 'authenticated',
+      user: userB,
+    });
+  });
+
+  it('fails closed and clears private state immediately when a semantic access-lost event supersedes restoration', async () => {
+    const pendingRestore = createDeferred<AuthenticationResult>();
+    const cleanup = vi.fn();
+    const restore = vi.fn()
+      .mockResolvedValueOnce({ status: 'authenticated', user: userA })
+      .mockImplementationOnce(() => pendingRestore.promise);
+    const controller = new AuthenticationController(createGateway({ restore }));
+    controller.registerPrivateStateCleanup(cleanup);
+    await controller.restoreAuthentication();
+
+    const reconciliation = controller.reconcileAuthentication();
+    await expect(controller.handleAccessLost()).resolves.toEqual({
+      status: 'unauthenticated',
+    });
+
+    expect(cleanup).toHaveBeenCalledOnce();
+    expect(controller.getCurrentAppUser()).toBeNull();
+    pendingRestore.resolve({ status: 'authenticated', user: userA });
+    await expect(reconciliation).resolves.toEqual({ status: 'unauthenticated' });
+    expect(controller.state).toEqual({ status: 'unauthenticated' });
   });
 
   it('clears user-owned state when restoration ends in an error', async () => {

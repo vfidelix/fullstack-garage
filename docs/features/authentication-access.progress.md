@@ -1,12 +1,13 @@
 # Authentication and Access Progress
 
 Status: Repository implementation complete; manual environment gates outstanding  
-Last updated: 2026-07-20  
+Last updated: 2026-07-23
 Canonical plan: [Authentication and Access Controlled Task Breakdown](authentication-access.task-breakdown.md)
+Plan revision: AUTH-PLAN-002 (approved 2026-07-23)
 
 ## Summary
 
-- Completed: 28 of 28 tasks
+- Completed: 29 of 29 tasks
 - In progress: None
 - Blocked: None
 - Next unblocked task: None; repository task loop complete
@@ -45,6 +46,7 @@ Canonical plan: [Authentication and Access Controlled Task Breakdown](authentica
 | AUTH-26 | Complete | 2026-07-20 | Validation and documentation/security reviewer gate passed |
 | AUTH-27 | Complete | 2026-07-20 | Medium build-time config leak risk fixed; re-review passed |
 | AUTH-28 | Complete | 2026-07-20 | Final verification and reviewer gate passed; manual gates recorded |
+| AUTH-29 | Complete | 2026-07-23 | AUTH-PLAN-002; same-user background reconciliation preserves protected workflows; automated verification recorded below |
 
 ## Completed Task Entries
 
@@ -1033,6 +1035,40 @@ Canonical plan: [Authentication and Access Controlled Task Breakdown](authentica
 - [ ] Defer Vehicle and Service Record row-level authorization claims until those
   tables/migrations exist and their runbooks prove policies based on
   `is_garage_admin()`.
+
+## AUTH-29 — Preserve Draft Work During Session Reconciliation
+
+- Approval/outcome: AUTH-PLAN-002 was approved on 2026-07-23. AUTH-29 is
+  complete: same-user token refresh, provider session changes, and browser focus
+  reconcile without replacing the authenticated protected route. Startup,
+  callback, and unauthenticated restoration remain full-page initialization.
+- Files changed: `src/application/ports/authenticationSessionEvents.ts`,
+  `src/application/use-cases/auth/authenticationController.ts`,
+  `src/app/providers/AuthenticationProvider.tsx`,
+  `src/infrastructure/supabase/auth/SupabaseAuthenticationSessionEvents.ts`,
+  their focused tests, and this canonical record.
+- Decisions: application-owned `session_changed` and `access_lost` signals
+  conceal Supabase event names, sessions, and tokens. Confirmed access loss and
+  an `AppUserId` change preserve a cleanup barrier while the protected shell is
+  removed before cleanup can await. A terminal background-reconciliation barrier
+  prevents focus or a later session event from superseding confirmed access
+  loss; an explicit startup, sign-in, or callback flow can begin fresh
+  authentication work. The AUTH29-R-F004 remediation adds the same immediate
+  fail-closed transition for background unauthenticated, unauthorized, expired,
+  and restore-error results. Final verification: focused controller/provider
+  suites passed (3 files, 52 tests); full `npm test` passed (64 files, 803
+  tests); `npm run typecheck`, zero-warning `npm run lint`, `npm run build`, and
+  `git diff --check` passed. Staging Google token-refresh/refocus confirmation
+  remains a manual environment gate.
+
+## AUTH-29 Reviewer Findings
+
+| ID | Severity | Finding | Fix task | Disposition and outcome |
+| --- | --- | --- | --- | --- |
+| AUTH29-R-F001 | High | The provider treated semantic `access_lost` as background reconciliation, allowing a delayed restore to defer fail-closed cleanup and protected-route exit. | AUTH-29 | Fixed. `access_lost` invokes the controller's immediate access-loss path, invalidates older work, clears registered private state, and transitions to `unauthenticated` without starting another restore. |
+| AUTH29-R-F002 | Medium | Route coverage did not dispatch browser focus against the real Vehicle and Service Record forms, and loss-of-access cleanup coverage needed explicit regression evidence. | AUTH-29 | Fixed. Route tests dispatch `focus` while actual form inputs retain their drafts; access-loss coverage proves form and shell removal plus Vehicle and Service Record cache cleanup. Controller/provider tests cover sign-out, expiry/revocation, unauthorized results, and `AppUserId` changes. |
+| AUTH29-R-F003 | High | After `access_lost` began cleanup, a later browser-focus or `session_changed` event could start a newer background restore and reauthenticate from stale provider state. | AUTH-29 | Fixed. The controller now blocks all background reconciliation from the moment access is lost (and for background unauthenticated, unauthorized, or expired results). Explicit startup, sign-in, and callback flows clear that barrier before beginning new foreground work. A provider regression covers access loss, both follow-up event sources, delayed cleanup, and delayed stale restore. |
+| AUTH29-R-F004 | High | A background reconciliation that resolved unauthenticated or unauthorized, expired or errored, or with a changed `AppUserId` started private-state cleanup but left the old authenticated shell mounted until asynchronous cleanup completed. | AUTH-29 | Fixed. The controller synchronously clears the current owner and publishes the terminal state (or `initializing` for an identity transfer) before awaiting cleanup. Same-user reconciliation alone retains the authenticated shell. Timing regressions cover unauthenticated, unauthorized, generic error, and identity-change outcomes; existing expiry and access-loss coverage remains fail closed. |
 
 ## Planning Decisions
 
