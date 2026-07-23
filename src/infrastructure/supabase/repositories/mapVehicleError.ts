@@ -19,6 +19,8 @@ interface ErrorFacts {
   readonly status: number | null;
 }
 
+export type VehicleProviderOperation = 'archive' | 'delete' | 'restore' | 'update';
+
 function readErrorFacts(error: unknown): ErrorFacts {
   if (typeof error !== 'object' || error === null) {
     return { code: null, status: null };
@@ -34,7 +36,10 @@ function readErrorFacts(error: unknown): ErrorFacts {
   };
 }
 
-export function mapSupabaseVehicleError(error: unknown): VehicleError {
+export function mapSupabaseVehicleError(
+  error: unknown,
+  operation?: VehicleProviderOperation,
+): VehicleError {
   const facts = readErrorFacts(error);
 
   if (facts.code !== null && VALIDATION_CODES.has(facts.code)) {
@@ -54,6 +59,10 @@ export function mapSupabaseVehicleError(error: unknown): VehicleError {
   }
 
   if (facts.code === '55000') {
+    if (operation === 'delete' || operation === 'update') {
+      return createVehicleError('service_record_history_conflict');
+    }
+
     return createVehicleError('lifecycle_conflict');
   }
 

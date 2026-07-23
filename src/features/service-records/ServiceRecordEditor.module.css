@@ -1,0 +1,32 @@
+.page { margin-inline: auto; max-width: var(--content-max-width); padding: var(--space-lg); }
+.header, .sectionHeader, .actions, .identity, .itemHeader { align-items: center; display: flex; gap: var(--space-xs); justify-content: space-between; }
+.header h1, section h2, .eyebrow { margin: 0; }
+.header h1 { font-size: var(--font-size-display-lg); font-weight: var(--font-weight-display); line-height: var(--line-height-display-lg); }
+.eyebrow, .field > span { color: var(--color-body); font-size: var(--font-size-caption); font-weight: var(--font-weight-semibold); letter-spacing: var(--letter-spacing-caption); text-transform: uppercase; }
+.back, .add, .save, .delete, .error button { align-items: center; border: var(--border-width-hairline) solid var(--color-ink); color: var(--color-ink); display: inline-flex; font-size: var(--font-size-button); font-weight: var(--font-weight-bold); gap: var(--space-xxs); min-height: var(--control-height); padding-inline: var(--space-xs); text-decoration: none; text-transform: uppercase; }
+.back, .add, .delete, .error button { background: transparent; }
+.identity { border-block: var(--border-width-hairline) solid var(--color-hairline); color: var(--color-body); margin-top: var(--space-md); padding-block: var(--space-xs); }
+.badge { background: var(--color-canvas-elevated); color: var(--color-ink); font-size: var(--font-size-caption); padding: var(--space-xxs); text-transform: uppercase; }
+.form { display: grid; gap: var(--space-md); margin-top: var(--space-md); }
+.form section { border-bottom: var(--border-width-hairline) solid var(--color-hairline); display: grid; gap: var(--space-sm); padding-bottom: var(--space-md); }
+.form h2 { font-size: var(--font-size-title-md); }
+.grid { display: grid; gap: var(--space-xs) var(--space-md); grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.field { display: grid; gap: var(--space-xxs); min-width: 0; }
+.dateControl { display: flex; gap: var(--space-xxs); }
+.dateControl input { min-width: 0; }
+.dateControl button { background: transparent; border: var(--border-width-hairline) solid var(--color-ink); color: var(--color-ink); min-height: var(--control-height); padding-inline: var(--space-xs); }
+.field input, .field select, .field textarea { background: var(--color-canvas); border: var(--border-width-hairline) solid var(--color-body); border-radius: var(--radius-none); color: var(--color-ink); font: inherit; min-height: var(--control-height); padding: var(--space-xxs) var(--space-xs); width: 100%; }
+.invalidField > span { color: var(--color-warning); }
+.invalidField input, .invalidField select, .invalidField textarea { border-color: var(--color-warning); }
+.field textarea { min-height: var(--textarea-min-height); resize: vertical; }
+.item { background: var(--color-canvas-elevated); display: grid; gap: var(--space-xs); padding: var(--space-xs); }
+.itemHeader button { background: transparent; border: 0; color: var(--color-ink); min-height: var(--control-height); }
+.bounds, .error { color: var(--color-body); margin: 0; max-width: var(--copy-max-width); }
+.error { border-left: var(--nav-active-border-width) solid var(--color-warning); color: var(--color-warning); padding-left: var(--space-xs); }
+.total { font-size: var(--font-size-title-md); font-weight: var(--font-weight-bold); }
+.actions { border-top: var(--border-width-hairline) solid var(--color-hairline); padding-top: var(--space-sm); }
+.save { background: var(--color-primary); border-color: var(--color-primary); color: var(--color-on-primary); }
+.delete { margin-right: auto; }
+.save:disabled, .delete:disabled { cursor: not-allowed; opacity: .6; }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: var(--focus-ring-width) solid var(--color-focus); outline-offset: var(--focus-ring-offset); }
+@media (max-width: 39.99rem) { .page { padding: var(--space-sm); } .header, .identity, .actions { align-items: stretch; display: grid; } .grid { grid-template-columns: minmax(0, 1fr); } .back, .save { justify-content: center; } .delete { margin-right: 0; } .itemHeader { align-items: start; } .dateControl { align-items: stretch; flex-direction: column; } }

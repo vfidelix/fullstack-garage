@@ -28,6 +28,15 @@ describe('mapSupabaseVehicleError', () => {
     expect(mapSupabaseVehicleError(error).category).toBe(category);
   });
 
+  it('maps completed-history guards only for the guarded Vehicle operations', () => {
+    expect(mapSupabaseVehicleError({ code: '55000' }, 'delete').category)
+      .toBe('service_record_history_conflict');
+    expect(mapSupabaseVehicleError({ code: '55000' }, 'update').category)
+      .toBe('service_record_history_conflict');
+    expect(mapSupabaseVehicleError({ code: '55000' }, 'archive').category)
+      .toBe('lifecycle_conflict');
+  });
+
   it('returns only fixed safe fields and does not retain private provider data', () => {
     const privateMarker = 'private-vehicle-sentinel';
     const mapped = mapSupabaseVehicleError({

@@ -22,6 +22,7 @@ import {
   type VehicleId,
 } from '../../domain/vehicles/vehicle';
 import { getSafeVehicleErrorMessage } from './vehicleErrorMessages';
+import { ServiceRecordHistory } from '../service-records/ServiceRecordHistory';
 import { useVehicleSessionGuard } from './vehicleContext';
 import {
   useArchiveVehicleMutation,
@@ -274,6 +275,8 @@ function VehicleDetailContent({ vehicleId }: { readonly vehicleId: VehicleId }) 
 
       <VehicleDetails vehicle={vehicle} />
 
+      <ServiceRecordHistory isArchived={isArchived} vehicleId={vehicle.id} />
+
       <section aria-labelledby="vehicle-lifecycle-title" className={styles.lifecycleSection}>
         <div>
           <p className={styles.eyebrow}>Vehicle state</p>
@@ -328,6 +331,15 @@ function VehicleDetailContent({ vehicleId }: { readonly vehicleId: VehicleId }) 
           onConfirm={() => {
             void confirmLifecycleAction();
           }}
+          {...(dialogAction === 'delete' && activeErrorCategory === 'service_record_history_conflict'
+            ? {
+                onArchiveInstead: () => {
+                  deleteMutation.reset();
+                  setSubmissionGeneration(undefined);
+                  setDialogAction('archive');
+                },
+              }
+            : {})}
           {...(activeErrorCategory === undefined
             ? {}
             : { errorCategory: activeErrorCategory })}

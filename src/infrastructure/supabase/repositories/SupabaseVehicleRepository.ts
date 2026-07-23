@@ -20,7 +20,10 @@ import {
   type VehicleSummary,
 } from '../../../domain/vehicles/vehicle';
 import { getSupabaseClient } from '../client';
-import { mapSupabaseVehicleError } from './mapVehicleError';
+import {
+  mapSupabaseVehicleError,
+  type VehicleProviderOperation,
+} from './mapVehicleError';
 import { mapVehicleRow, mapVehicleSummaryRow } from './mapVehicleRow';
 
 const VEHICLE_COLUMNS = [
@@ -89,8 +92,11 @@ function success<T>(value: T): VehicleResult<T> {
   return { ok: true, value };
 }
 
-function failure<T>(error: unknown): VehicleResult<T> {
-  return { ok: false, error: mapSupabaseVehicleError(error) };
+function failure<T>(
+  error: unknown,
+  operation?: VehicleProviderOperation,
+): VehicleResult<T> {
+  return { ok: false, error: mapSupabaseVehicleError(error, operation) };
 }
 
 function malformedFailure<T>(): VehicleResult<T> {
@@ -200,9 +206,9 @@ export class SupabaseVehicleRepository implements VehicleRepository {
         .select(VEHICLE_COLUMNS)
         .maybeSingle();
 
-      return this.mapSingleVehicleResponse(response);
+      return this.mapSingleVehicleResponse(response, 'update');
     } catch (error: unknown) {
-      return failure(error);
+      return failure(error, 'update');
     }
   }
 
@@ -224,7 +230,7 @@ export class SupabaseVehicleRepository implements VehicleRepository {
         .maybeSingle();
 
       if (response.error !== null) {
-        return failure(withStatus(response.error, response.status));
+        return failure(withStatus(response.error, response.status), 'delete');
       }
 
       if (
@@ -241,7 +247,7 @@ export class SupabaseVehicleRepository implements VehicleRepository {
 
       return success(undefined);
     } catch (error: unknown) {
-      return failure(error);
+      return failure(error, 'delete');
     }
   }
 
@@ -357,9 +363,10 @@ export class SupabaseVehicleRepository implements VehicleRepository {
 
   private mapSingleVehicleResponse(
     response: VehicleProviderResponse,
+    operation?: VehicleProviderOperation,
   ): VehicleResult<Vehicle> {
     if (response.error !== null) {
-      return failure(withStatus(response.error, response.status));
+      return failure(withStatus(response.error, response.status), operation);
     }
 
     if (response.data === null) {

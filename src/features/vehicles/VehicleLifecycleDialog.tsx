@@ -15,6 +15,7 @@ interface VehicleLifecycleDialogProps {
   readonly errorCategory?: VehicleErrorCategory;
   readonly isPending: boolean;
   readonly label: string;
+  readonly onArchiveInstead?: () => void;
   readonly onCancel: () => void;
   readonly onConfirm: () => void;
 }
@@ -28,7 +29,7 @@ const dialogContent: Readonly<Record<VehicleLifecycleAction, {
   archive: {
     confirmLabel: 'Archive Vehicle',
     description: (label) => (
-      `Archive ${label}? It will leave the active list while its details and any history remain preserved.`
+      `Archive ${label}? Draft Service Records will be removed, while completed Service Records remain available in Service History.`
     ),
     pendingLabel: 'Archiving Vehicle',
     title: 'Archive Vehicle?',
@@ -56,6 +57,7 @@ export function VehicleLifecycleDialog({
   errorCategory,
   isPending,
   label,
+  onArchiveInstead,
   onCancel,
   onConfirm,
 }: VehicleLifecycleDialogProps) {
@@ -156,10 +158,15 @@ export function VehicleLifecycleDialog({
         </div>
         <p className={styles.dialogDescription} id={descriptionId}>
           {content.description(label)}
+          {action === 'delete' && (
+            <> Completed Service Records will be retained when you archive this Vehicle.</>
+          )}
         </p>
         {errorCategory !== undefined && (
           <p className={styles.dialogError} role="alert">
-            {getSafeVehicleErrorMessage(errorCategory)}
+            {errorCategory === 'service_record_history_conflict'
+              ? 'Completed Service Record history prevents permanent deletion. Archive this Vehicle instead to preserve its completed history.'
+              : getSafeVehicleErrorMessage(errorCategory)}
           </p>
         )}
         <div className={styles.dialogActions}>
@@ -172,6 +179,18 @@ export function VehicleLifecycleDialog({
           >
             Cancel
           </button>
+          {action === 'delete'
+            && errorCategory === 'service_record_history_conflict'
+            && onArchiveInstead !== undefined && (
+            <button
+              className={styles.dialogConfirmButton}
+              disabled={isPending}
+              onClick={onArchiveInstead}
+              type="button"
+            >
+              Archive Vehicle instead
+            </button>
+          )}
           <button
             className={action === 'delete'
               ? styles.dialogDeleteButton
