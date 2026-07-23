@@ -16,10 +16,15 @@ import {
   VEHICLE_DETAIL_PATH,
   VEHICLE_EDIT_PATH,
   VEHICLES_PATH,
+  NEW_SERVICE_RECORD_PATH,
+  SERVICE_RECORD_DETAIL_PATH,
+  SERVICE_RECORD_EDIT_PATH,
 } from './routePaths';
 import { VehicleDetailScreen } from '../../features/vehicles/VehicleDetailScreen';
 import { VehicleFormScreen } from '../../features/vehicles/VehicleFormScreen';
 import { VehicleListScreen } from '../../features/vehicles/VehicleListScreen';
+import { ServiceRecordEditor } from '../../features/service-records/ServiceRecordEditor';
+import { ServiceRecordDetail } from '../../features/service-records/ServiceRecordDetail';
 
 function DashboardRoute() {
   return (
@@ -87,6 +92,18 @@ export function AppRoutes() {
         <Route
           path={VEHICLE_DETAIL_PATH}
           element={<VehicleDetailScreen />}
+        />
+        <Route
+          path={NEW_SERVICE_RECORD_PATH}
+          element={<ServiceRecordEditor mode="new" />}
+        />
+        <Route
+          path={SERVICE_RECORD_EDIT_PATH}
+          element={<ServiceRecordEditor mode="edit" />}
+        />
+        <Route
+          path={SERVICE_RECORD_DETAIL_PATH}
+          element={<ServiceRecordDetail />}
         />
         <Route path="/*" element={<ProtectedApplicationRoute />} />
       </Route>

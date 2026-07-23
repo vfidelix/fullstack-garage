@@ -568,4 +568,23 @@ describe('SupabaseVehicleRepository', () => {
       error: { category: 'validation', issues: [] },
     });
   });
+
+  it('maps completed Service Record history guards only for delete and update', async () => {
+    const update = createHarness(response(null, { code: '55000' }));
+    const remove = createHarness(response(null, { code: '55000' }));
+    const input = {
+      make: 'Ferrari',
+      model: 'Roma',
+      odometerUnit: 'mi' as const,
+    };
+
+    await expect(update.repository.update(vehicleId, input)).resolves.toMatchObject({
+      ok: false,
+      error: { category: 'service_record_history_conflict' },
+    });
+    await expect(remove.repository.delete(vehicleId)).resolves.toMatchObject({
+      ok: false,
+      error: { category: 'service_record_history_conflict' },
+    });
+  });
 });

@@ -10,6 +10,8 @@ import { AuthenticationContext } from '../providers/authenticationContext';
 import type { VehicleSummary } from '../../domain/vehicles/vehicle';
 import { VehicleProvider } from '../../features/vehicles/VehicleProvider';
 import type { VehicleOperations } from '../../features/vehicles/vehicleContext';
+import { ServiceRecordProvider } from '../../features/service-records/ServiceRecordProvider';
+import type { ServiceRecordOperations } from '../../features/service-records/serviceRecordContext';
 import { AppRoutes } from './AppRoutes';
 
 const activeVehicle: VehicleSummary = {
@@ -69,6 +71,20 @@ function createOperations(): VehicleOperations {
   };
 }
 
+function createServiceRecordOperations(): ServiceRecordOperations {
+  return {
+    completeServiceRecord: vi.fn(),
+    createServiceRecordDraft: vi.fn(),
+    createServiceRecordSnapshot: vi.fn(),
+    deleteServiceRecordDraft: vi.fn(),
+    downloadServiceRecordPdf: vi.fn(),
+    getServiceRecord: vi.fn(),
+    listServiceRecordsForVehicle: vi.fn().mockResolvedValue({ ok: true, value: [] }),
+    previewServiceRecordPdf: vi.fn(),
+    saveServiceRecordDraft: vi.fn(),
+  };
+}
+
 function renderRoute(path: string) {
   const client = new QueryClient({
     defaultOptions: { queries: { gcTime: Infinity, retry: false } },
@@ -78,9 +94,11 @@ function renderRoute(path: string) {
     <QueryClientProvider client={client}>
       <AuthenticationContext.Provider value={createAuthentication()}>
         <VehicleProvider operations={createOperations()}>
-          <MemoryRouter initialEntries={[path]}>
-            <AppRoutes />
-          </MemoryRouter>
+          <ServiceRecordProvider operations={createServiceRecordOperations()}>
+            <MemoryRouter initialEntries={[path]}>
+              <AppRoutes />
+            </MemoryRouter>
+          </ServiceRecordProvider>
         </VehicleProvider>
       </AuthenticationContext.Provider>
     </QueryClientProvider>,

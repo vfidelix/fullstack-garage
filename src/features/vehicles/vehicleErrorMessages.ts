@@ -5,6 +5,7 @@ const safeVehicleErrorMessages: Readonly<Record<VehicleErrorCategory, string>> =
   not_found: 'This Vehicle could not be found.',
   unauthorized: 'You do not have access to manage Vehicles.',
   lifecycle_conflict: 'This Vehicle cannot be changed in its current state.',
+  service_record_history_conflict: 'Completed Service Record history prevents this Vehicle change.',
   temporary_failure: 'Vehicles are temporarily unavailable. Please try again.',
 };
 

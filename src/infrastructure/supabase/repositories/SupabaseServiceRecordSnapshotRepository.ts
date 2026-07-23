@@ -1,0 +1,22 @@
+/* eslint-disable @stylistic/max-statements-per-line -- Provider boundary keeps RPC payloads and guard clauses compact. */
+import type { ServiceRecordSnapshotRepository, ServiceRecordSnapshotSummary } from '../../../application/ports/serviceRecordSnapshotRepository';
+import type { ServiceRecordResult } from '../../../application/service-records/serviceRecordResult';
+import type { ServiceRecordId, ServiceRecordSnapshot, ServiceRecordSnapshotId } from '../../../domain/service-records/serviceRecord';
+import { getSupabaseClient } from '../client';
+import { mapSupabaseServiceRecordError } from './mapServiceRecordError';
+import { mapServiceRecordSnapshotSummaryRow } from './mapServiceRecordRow';
+import type { ServiceRecordRepositoryClient } from './SupabaseServiceRecordRepository';
+
+const EXPORT_COLUMNS = 'id,service_record_id,service_record_version,snapshot,schema_version,template_version,branding_version,created_at';
+const success = <T>(value: T): ServiceRecordResult<T> => ({ ok: true, value });
+const failure = <T>(error: unknown): ServiceRecordResult<T> => ({ ok: false, error: mapSupabaseServiceRecordError(error) });
+const malformed = <T>(): ServiceRecordResult<T> => failure({ code: 'malformed_provider_response' });
+const statusError = (error: unknown, status: number | undefined): unknown => ({ ...(typeof error === 'object' && error !== null ? error : {}), status });
+function snapshotPayload(snapshot: ServiceRecordSnapshot): Readonly<Record<string, unknown>> { return { id: snapshot.id, serviceRecordId: snapshot.serviceRecordId, serviceRecordVersion: snapshot.serviceRecordVersion, schemaVersion: snapshot.schemaVersion, templateVersion: snapshot.templateVersion, brandingVersion: snapshot.brandingVersion, snapshot }; }
+function mapSnapshot(row: unknown): ServiceRecordSnapshot | null { const summary = mapServiceRecordSnapshotSummaryRow(row); if (summary === null || typeof row !== 'object' || row === null || !('snapshot' in row) || typeof row.snapshot !== 'object' || row.snapshot === null || Array.isArray(row.snapshot)) return null; const snapshot = row.snapshot as ServiceRecordSnapshot; return snapshot.id === summary.id && snapshot.serviceRecordId === summary.serviceRecordId && snapshot.serviceRecordVersion === summary.serviceRecordVersion && snapshot.schemaVersion === summary.schemaVersion && snapshot.templateVersion === summary.templateVersion && snapshot.brandingVersion === summary.brandingVersion && snapshot.displayNumber === summary.displayNumber ? snapshot : null; }
+export class SupabaseServiceRecordSnapshotRepository implements ServiceRecordSnapshotRepository {
+  public constructor(private readonly client: ServiceRecordRepositoryClient = getSupabaseClient() as unknown as ServiceRecordRepositoryClient) {}
+  public async getById(id: ServiceRecordSnapshotId): Promise<ServiceRecordResult<ServiceRecordSnapshot | null>> { try { const response = await this.client.from('service_record_exports').select(EXPORT_COLUMNS).eq('id', id).maybeSingle(); if (response.error !== null) return failure(statusError(response.error, response.status)); if (response.data === null) return success(null); const snapshot = mapSnapshot(response.data); return snapshot === null ? malformed() : success(snapshot); } catch (error: unknown) { return failure(error); } }
+  public async listForRecord(id: ServiceRecordId): Promise<ServiceRecordResult<readonly ServiceRecordSnapshotSummary[]>> { try { const response = await this.client.from('service_record_exports').select(EXPORT_COLUMNS).eq('service_record_id', id).order('created_at', { ascending: false }).order('id', { ascending: true }); if (response.error !== null) return failure(statusError(response.error, response.status)); if (!Array.isArray(response.data)) return malformed(); const snapshots = response.data.map(mapServiceRecordSnapshotSummaryRow); return snapshots.some((snapshot) => snapshot === null) ? malformed() : success(snapshots as ServiceRecordSnapshotSummary[]); } catch (error: unknown) { return failure(error); } }
+  public async save(snapshot: ServiceRecordSnapshot): Promise<ServiceRecordResult<ServiceRecordSnapshot>> { try { const response = await this.client.rpc('create_service_record_export', { p_export: snapshotPayload(snapshot) }).select(EXPORT_COLUMNS).maybeSingle(); if (response.error !== null) return failure(statusError(response.error, response.status)); const saved = mapSnapshot(response.data); return saved === null ? malformed() : success(saved); } catch (error: unknown) { return failure(error); } }
+}

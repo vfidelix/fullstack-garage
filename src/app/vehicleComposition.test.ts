@@ -136,7 +136,7 @@ describe('Vehicle composition', () => {
     );
   });
 
-  it('keeps concrete Vehicle repository construction at the app boundary', () => {
+  it('keeps concrete Vehicle repository construction at app composition boundaries', () => {
     const productionSources = import.meta.glob<string>(
       ['../**/*.ts', '../**/*.tsx'],
       { eager: true, import: 'default', query: '?raw' },
@@ -146,8 +146,11 @@ describe('Vehicle composition', () => {
       .filter(([, source]) => source.includes('new SupabaseVehicleRepository('))
       .map(([path]) => path);
 
-    expect(constructionSites).toHaveLength(1);
-    expect(constructionSites[0]).toMatch(/vehicleComposition\.ts$/u);
+    expect(constructionSites).toHaveLength(2);
+    expect(constructionSites).toEqual(expect.arrayContaining([
+      expect.stringMatching(/vehicleComposition\.ts$/u),
+      expect.stringMatching(/serviceRecordComposition\.ts$/u),
+    ]));
   });
 
   it('keeps Supabase client access inside the Supabase infrastructure boundary', () => {

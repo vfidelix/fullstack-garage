@@ -5,6 +5,7 @@ export type VehicleErrorCategory
     | 'not_found'
     | 'unauthorized'
     | 'lifecycle_conflict'
+    | 'service_record_history_conflict'
     | 'temporary_failure';
 
 export interface VehicleValidationError {
@@ -35,6 +36,7 @@ const vehicleErrorMessages: Readonly<
   not_found: 'This Vehicle could not be found.',
   unauthorized: 'You do not have access to manage Vehicles.',
   lifecycle_conflict: 'This Vehicle cannot be changed in its current state.',
+  service_record_history_conflict: 'Completed Service Record history prevents this Vehicle change.',
   temporary_failure: 'Vehicles are temporarily unavailable. Please try again.',
 };
 

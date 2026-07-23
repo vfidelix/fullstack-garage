@@ -23,6 +23,8 @@ import {
 import type { Vehicle } from '../../domain/vehicles/vehicle';
 import { VehicleProvider } from './VehicleProvider';
 import type { VehicleOperations } from './vehicleContext';
+import { ServiceRecordProvider } from '../service-records/ServiceRecordProvider';
+import type { ServiceRecordOperations } from '../service-records/serviceRecordContext';
 
 const vehicle: Vehicle = {
   id: 'vehicle-1',
@@ -146,6 +148,20 @@ function createOperations(
   };
 }
 
+function createServiceRecordOperations(): ServiceRecordOperations {
+  return {
+    completeServiceRecord: vi.fn(),
+    createServiceRecordDraft: vi.fn(),
+    createServiceRecordSnapshot: vi.fn(),
+    deleteServiceRecordDraft: vi.fn(),
+    downloadServiceRecordPdf: vi.fn(),
+    getServiceRecord: vi.fn(),
+    listServiceRecordsForVehicle: vi.fn().mockResolvedValue({ ok: true, value: [] }),
+    previewServiceRecordPdf: vi.fn(),
+    saveServiceRecordDraft: vi.fn(),
+  };
+}
+
 function LocationProbe() {
   const location = useLocation();
   return (
@@ -173,10 +189,12 @@ function renderWorkflow(
     <QueryClientProvider client={client}>
       <AuthenticationContext.Provider value={authentication}>
         <VehicleProvider operations={operations}>
-          <MemoryRouter initialEntries={[path]}>
-            <AppRoutes />
-            <LocationProbe />
-          </MemoryRouter>
+          <ServiceRecordProvider operations={createServiceRecordOperations()}>
+            <MemoryRouter initialEntries={[path]}>
+              <AppRoutes />
+              <LocationProbe />
+            </MemoryRouter>
+          </ServiceRecordProvider>
         </VehicleProvider>
       </AuthenticationContext.Provider>
     </QueryClientProvider>
@@ -402,6 +420,26 @@ describe('Vehicle create workflow', () => {
       name: '2021 Ferrari Roma · SYN 123 WA',
     })).toBeVisible();
     expect(createVehicle).toHaveBeenCalledTimes(2);
+  });
+
+  it('explains that completed Service Record history locks an odometer-unit change', async () => {
+    const user = userEvent.setup();
+    const updateVehicle = vi.fn().mockResolvedValue({
+      ok: false,
+      error: createVehicleError('service_record_history_conflict'),
+    });
+    renderWorkflow('/vehicles/vehicle-1/edit', createOperations({ updateVehicle }));
+
+    await screen.findByDisplayValue('SYN 123');
+    await user.click(screen.getByRole('radio', { name: 'Miles' }));
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Completed Service Record history prevents this Vehicle change.',
+    );
+    expect(updateVehicle).toHaveBeenCalledWith('vehicle-1', expect.objectContaining({
+      odometerUnit: 'mi',
+    }));
   });
 
   it('maps authoritative Body validation to its count and accessible field error', async () => {
@@ -714,7 +752,7 @@ describe('Vehicle lifecycle workflows', () => {
     const dialog = screen.getByRole('dialog', { name: 'Archive Vehicle?' });
     expect(dialog).toHaveAttribute('aria-modal', 'true');
     expect(dialog).toHaveTextContent(
-      'It will leave the active list while its details and any history remain preserved.',
+      'Draft Service Records will be removed, while completed Service Records remain available in Service History.',
     );
     expect(within(dialog).getByRole('button', { name: 'Cancel' })).toHaveFocus();
 
@@ -859,7 +897,9 @@ describe('Vehicle lifecycle workflows', () => {
         name: 'Delete Vehicle permanently?',
       });
       expect(dialog).toHaveTextContent('cannot be undone');
-      expect(dialog).not.toHaveTextContent(/Service Record|related record|history conflict|blocked/iu);
+      expect(dialog).toHaveTextContent(
+        'Completed Service Records will be retained when you archive this Vehicle.',
+      );
 
       await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
       expect(deleteVehicle).not.toHaveBeenCalled();
@@ -876,6 +916,42 @@ describe('Vehicle lifecycle workflows', () => {
       expect(operations[listOperation]).toHaveBeenCalledOnce();
     },
   );
+
+  it('offers archive when completed Service Record history blocks permanent deletion', async () => {
+    const user = userEvent.setup();
+    const archiveVehicle = vi.fn().mockResolvedValue({ ok: true, value: vehicle });
+    const operations = createOperations({
+      archiveVehicle,
+      deleteVehicle: vi.fn().mockResolvedValue({
+        ok: false,
+        error: createVehicleError('service_record_history_conflict'),
+      }),
+      listArchivedVehicles: vi.fn().mockResolvedValue({ ok: true, value: [vehicle] }),
+    });
+    renderWorkflow('/vehicles/vehicle-1', operations);
+
+    await user.click(await screen.findByRole('button', { name: 'Delete permanently' }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', {
+      name: 'Delete permanently',
+    }));
+
+    const dialog = await screen.findByRole('dialog', {
+      name: 'Delete Vehicle permanently?',
+    });
+    expect(dialog).toHaveTextContent(
+      'Completed Service Record history prevents permanent deletion. Archive this Vehicle instead to preserve its completed history.',
+    );
+    await user.click(within(dialog).getByRole('button', { name: 'Archive Vehicle instead' }));
+    expect(screen.getByRole('dialog', { name: 'Archive Vehicle?' })).toHaveTextContent(
+      'Draft Service Records will be removed, while completed Service Records remain available in Service History.',
+    );
+
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', {
+      name: 'Archive Vehicle',
+    }));
+
+    expect(archiveVehicle).toHaveBeenCalledWith('vehicle-1');
+  });
 });
 
 describe('Vehicle mutation authentication ownership', () => {
