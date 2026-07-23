@@ -1,6 +1,7 @@
 # Authentication and Access Controlled Task Breakdown
 
-Status: Ready for implementation  
+Status: AUTH-29 complete; manual environment gates outstanding
+Plan revision: AUTH-PLAN-002 (approved 2026-07-23)
 Source: [Authentication and Access Feature](authentication-access.md)  
 Architecture: [Fullstack Garage Architecture](../architecture/fullstack-garage-architecture.md)  
 Prior planning: [Authentication and Access Implementation Breakdown](authentication-access-breakdown.md)
@@ -64,12 +65,14 @@ in parallel only when their declared file areas do not overlap.
 | AUTH-26 | Document privileged single-admin account recovery | AUTH-08, AUTH-09 | `docs/operations/` or feature runbook | Documentation/security review; product-owner decision gate |
 | AUTH-27 | Run and remediate the final auth security audit | AUTH-12, AUTH-18, AUTH-23, AUTH-24, AUTH-25, AUTH-26 | Auth feature scope only | Audit searches plus all automated checks |
 | AUTH-28 | Run final automated verification and record manual gates | AUTH-27 | Progress/runbook documentation | `npm test`, typecheck, lint, build, database suite |
+| AUTH-29 | Preserve active workflows during background session reconciliation | AUTH-20, AUTH-21, AUTH-24 | Auth application/provider/event modules and focused workflow tests | Controller, provider, route, Vehicle, and Service Record regression tests; typecheck, lint, build |
 
 ## 4. Task Scope and Completion Criteria
 
 The detailed behavior for AUTH-01 through AUTH-28 is the corresponding Task 1
-through Task 28 in the preserved prior planning document. The following controls
-are additional and authoritative:
+through Task 28 in the preserved prior planning document. AUTH-29 is a
+post-implementation remediation introduced by the approved 2026-07-23 feature
+update. The following controls are additional and authoritative:
 
 - AUTH-01 should add only dependencies required by the approved feature and its
   tests. It must not add authentication behavior.
@@ -94,6 +97,24 @@ are additional and authoritative:
   architecture change triggers the user's stop condition.
 - AUTH-28 distinguishes repository-complete verification from the manual
   environment gates below; it must not claim unperformed staging verification.
+- AUTH-29 must preserve the authenticated state and mounted protected route
+  during same-user background reconciliation. It must not publish an
+  intermediate `initializing` state for routine token refresh or browser
+  refocus.
+- AUTH-29 must retain full-page initialization for startup and authentication
+  callback flows where no authenticated application user has been established.
+- AUTH-29 must keep provider events behind a provider-neutral application port.
+  Supabase event names, session objects, and token values must remain inside
+  `src/infrastructure/supabase/`.
+- AUTH-29 must preserve the existing newest-operation-wins protection and must
+  transition fail closed on confirmed sign-out, session expiry or revocation,
+  authorization loss, and application-user identity change. Private state must
+  be cleared before another user can own it.
+- AUTH-29 regression coverage must prove that partially entered Vehicle and
+  Service Record forms remain mounted and unchanged through token refresh,
+  browser refocus, and same-user reconciliation. It must also prove that
+  sign-out, expiry, authorization loss, and identity change still remove access
+  and run the required private-state cleanup.
 
 ## 5. Safe Parallelism
 
@@ -114,9 +135,9 @@ file areas:
   searches may run in parallel with implementation when they do not mutate the
   same files.
 
-Do not run AUTH-16 and AUTH-17, AUTH-21 through AUTH-23, or final remediation in
-parallel because those tasks touch tightly coupled modules. Wait for every task
-in a parallel batch to finish and resolve conflicts before review.
+Do not run AUTH-16 and AUTH-17, AUTH-21 through AUTH-23, final remediation, or
+AUTH-29 in parallel because those tasks touch tightly coupled modules. Wait for
+every task in a parallel batch to finish and resolve conflicts before review.
 
 ## 6. Controlled Loop for Every Task
 
@@ -146,6 +167,8 @@ Repository implementation cannot perform these deployment-owner actions:
 - Verify the intended Supabase identity before privileged admin promotion.
 - Execute the reviewed promotion and disable public sign-up.
 - Confirm session controls and run the real Google staging smoke test.
+- In the staging smoke test, verify that browser refocus and a real token refresh
+  preserve partially entered Vehicle and Service Record data.
 
 The feature specification also leaves the single-admin recovery procedure open.
 AUTH-26 is therefore a product-owner decision gate: implementation must stop for
@@ -163,8 +186,7 @@ AUTH-11 must provide and verify the Garage Admin helper, while those feature
 migrations must later apply it to their own tables. This is an explicit
 cross-feature dependency, not permission to introduce placeholder tables.
 
-## 8. First Unblocked Task
+## 8. Next Unblocked Task
 
-Select **AUTH-01: Add runtime and test dependencies; configure Vitest and
-`npm test`**. It has no dependencies and establishes the validation harness used
-by every subsequent implementation task.
+None. AUTH-29 is complete; the remaining work is the manual environment gates
+recorded in the progress ledger.

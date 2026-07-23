@@ -14,8 +14,13 @@ import { StrictMode } from 'react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import { AppRoutes } from '../../app/routes/AppRoutes';
+import { AuthenticationProvider } from '../../app/providers/AuthenticationProvider';
 import type { AuthenticationContextValue } from '../../app/providers/authenticationContext';
 import { AuthenticationContext } from '../../app/providers/authenticationContext';
+import type { AuthenticationSessionEvent, AuthenticationSessionEvents } from '../../application/ports/authenticationSessionEvents';
+import type { AuthGateway } from '../../application/ports/authGateway';
+import { AuthenticationController } from '../../application/use-cases/auth/authenticationController';
+import type { AuthenticationResult } from '../../application/authentication/authenticationModels';
 import {
   createVehicleError,
   createVehicleValidationError,
@@ -23,8 +28,10 @@ import {
 import type { Vehicle } from '../../domain/vehicles/vehicle';
 import { VehicleProvider } from './VehicleProvider';
 import type { VehicleOperations } from './vehicleContext';
+import { vehicleQueryKeys } from './vehicleQueries';
 import { ServiceRecordProvider } from '../service-records/ServiceRecordProvider';
 import type { ServiceRecordOperations } from '../service-records/serviceRecordContext';
+import { serviceRecordQueryKeys } from '../service-records/serviceRecordQueries';
 
 const vehicle: Vehicle = {
   id: 'vehicle-1',
@@ -63,17 +70,16 @@ const activeVehicle: Vehicle = {
 };
 const nonBmpCharacter = '\u{1F600}';
 
+const authenticatedUser = {
+  id: 'owner-private',
+  displayName: 'Garage Operator',
+  role: 'admin',
+  createdAt: '2026-07-20T00:00:00.000Z',
+  updatedAt: '2026-07-20T00:00:00.000Z',
+} as const;
+
 function createAuthentication(): AuthenticationContextValue {
-  const state = {
-    status: 'authenticated',
-    user: {
-      id: 'owner-private',
-      displayName: 'Garage Operator',
-      role: 'admin',
-      createdAt: '2026-07-20T00:00:00.000Z',
-      updatedAt: '2026-07-20T00:00:00.000Z',
-    },
-  } as const;
+  const state = { status: 'authenticated', user: authenticatedUser } as const;
 
   return {
     completeAuthenticationRedirect: vi.fn().mockResolvedValue(state),
@@ -162,6 +168,58 @@ function createServiceRecordOperations(): ServiceRecordOperations {
   };
 }
 
+function createReconciliationEvents(): {
+  readonly emit: (event?: AuthenticationSessionEvent) => void;
+  readonly events: AuthenticationSessionEvents;
+} {
+  let listener: ((event: AuthenticationSessionEvent) => void) | undefined;
+  return {
+    emit: (event = { type: 'session_changed' }) => listener?.(event),
+    events: { subscribe: (nextListener) => {
+      listener = nextListener;
+      return () => {
+        listener = undefined;
+      };
+    } },
+  };
+}
+
+function renderProtectedDraftRoute(path: string) {
+  const reconciliation = createDeferred<AuthenticationResult>();
+  const gateway: AuthGateway = {
+    restore: vi.fn()
+      .mockResolvedValue({ status: 'authenticated', user: authenticatedUser })
+      .mockResolvedValueOnce({ status: 'authenticated', user: authenticatedUser })
+      .mockImplementationOnce(() => reconciliation.promise),
+    signInWithGoogle: vi.fn(),
+    signOut: vi.fn(),
+  };
+  const controller = new AuthenticationController(gateway);
+  const { emit, events } = createReconciliationEvents();
+  const client = new QueryClient({ defaultOptions: { queries: { gcTime: Infinity, retry: false } } });
+
+  const view = render(
+    <QueryClientProvider client={client}>
+      <AuthenticationProvider controller={controller} sessionEvents={events}>
+        <VehicleProvider operations={createOperations()}>
+          <ServiceRecordProvider operations={createServiceRecordOperations()}>
+            <MemoryRouter initialEntries={[path]}><AppRoutes /></MemoryRouter>
+          </ServiceRecordProvider>
+        </VehicleProvider>
+      </AuthenticationProvider>
+    </QueryClientProvider>,
+  );
+
+  return {
+    client,
+    emit,
+    reconciliation,
+    unmount: () => {
+      view.unmount();
+    },
+  };
+}
+
 function LocationProbe() {
   const location = useLocation();
   return (
@@ -239,6 +297,58 @@ async function submitWorkflowMutation(
 }
 
 describe('Vehicle create workflow', () => {
+  it('keeps partially entered Vehicle and Service Record inputs mounted during session reconciliation and browser refocus', async () => {
+    const user = userEvent.setup();
+    const vehicleRoute = renderProtectedDraftRoute('/vehicles/new');
+    await screen.findByRole('heading', { name: 'Add Vehicle' });
+    await user.type(screen.getByLabelText('Make'), 'Ferrari');
+    vehicleRoute.emit();
+    expect(screen.getByLabelText('Make')).toHaveValue('Ferrari');
+    vehicleRoute.reconciliation.resolve({ status: 'authenticated', user: authenticatedUser });
+    await waitFor(() => expect(screen.getByLabelText('Make')).toHaveValue('Ferrari'));
+    act(() => {
+      window.dispatchEvent(new Event('focus'));
+    });
+    await waitFor(() => expect(screen.getByLabelText('Make')).toHaveValue('Ferrari'));
+    vehicleRoute.unmount();
+
+    const serviceRoute = renderProtectedDraftRoute('/vehicles/vehicle-1/service-records/new');
+    await screen.findByRole('heading', { name: 'New Service Record' });
+    await user.type(screen.getByLabelText('Performed by'), 'Maranello workshop');
+    serviceRoute.emit();
+    expect(screen.getByLabelText('Performed by')).toHaveValue('Maranello workshop');
+    serviceRoute.reconciliation.resolve({ status: 'authenticated', user: authenticatedUser });
+    await waitFor(() => expect(screen.getByLabelText('Performed by')).toHaveValue('Maranello workshop'));
+    act(() => {
+      window.dispatchEvent(new Event('focus'));
+    });
+    await waitFor(() => expect(screen.getByLabelText('Performed by')).toHaveValue('Maranello workshop'));
+  });
+
+  it('removes protected drafts, shell access, and private caches on access loss', async () => {
+    const user = userEvent.setup();
+    const route = renderProtectedDraftRoute('/vehicles/new');
+    await screen.findByRole('heading', { name: 'Add Vehicle' });
+    await user.type(screen.getByLabelText('Make'), 'Ferrari');
+    route.client.setQueryData(vehicleQueryKeys.active, [activeVehicle]);
+    route.client.setQueryData(serviceRecordQueryKeys.forVehicle(activeVehicle.id), [{
+      id: 'service-record-private',
+    }]);
+
+    act(() => {
+      route.emit({ type: 'access_lost' });
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByLabelText('Make')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('authenticated-shell')).not.toBeInTheDocument();
+      expect(route.client.getQueryData(vehicleQueryKeys.active)).toBeUndefined();
+      expect(route.client.getQueryData(
+        serviceRecordQueryKeys.forVehicle(activeVehicle.id),
+      )).toBeUndefined();
+    });
+  });
+
   it('defaults to kilometres and excludes protected fields from the form', () => {
     renderWorkflow('/vehicles/new');
 

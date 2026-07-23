@@ -11,7 +11,10 @@ import {
 import type { ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import type { AuthGateway } from '../../application/ports/authGateway';
-import type { AuthenticationSessionEvents } from '../../application/ports/authenticationSessionEvents';
+import type {
+  AuthenticationSessionEvent,
+  AuthenticationSessionEvents,
+} from '../../application/ports/authenticationSessionEvents';
 import { AuthenticationController } from '../../application/use-cases/auth/authenticationController';
 import type { VehicleMutationOutcome } from '../../application/use-cases/vehicles/vehicleUseCases';
 import type { VehicleResult } from '../../application/vehicles/vehicleResult';
@@ -102,15 +105,15 @@ function createDeferred<T>(): {
 }
 
 function createSessionEvents() {
-  let listener: (() => void) | undefined;
+  let listener: ((event: AuthenticationSessionEvent) => void) | undefined;
   const events: AuthenticationSessionEvents = {
-    subscribe: vi.fn((nextListener: () => void) => {
+    subscribe: vi.fn((nextListener: (event: AuthenticationSessionEvent) => void) => {
       listener = nextListener;
       return vi.fn();
     }),
   };
 
-  return { emit: () => listener?.(), events };
+  return { emit: () => listener?.({ type: 'session_changed' }), events };
 }
 
 function Harness({
